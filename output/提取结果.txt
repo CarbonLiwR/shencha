@@ -1,11 +1,9 @@
 === 文档信息提取报告 ===
 
-                        文件: 1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf
-                        类型: 论文
-                        标题: Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia
-                        作者: 未知
-                        期刊: American Journal of Hematology
-                        年份: 2024
-                        DOI: 10.1002/ajh.27272
-                        ========================================
-                    
+文件: 一种基于改进近似消息传递的心电信号重构方法.pdf
+错误: object str can't be used in 'await' expression
+========================================
+
+文件: 周博共一文章.pdf
+错误: object str can't be used in 'await' expression
+========================================

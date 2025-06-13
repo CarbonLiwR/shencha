@@ -1,26 +1,25 @@
+from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+from typing import List, Dict, Any, Optional
+from datetime import datetime
 import os
-from typing import List
+import json
 import tempfile
 import shutil
 from file_module.functions.reader import PdfReader
-from fastapi import FastAPI, HTTPException,UploadFile,File
-from pydantic import BaseModel, HttpUrl
-from agent.extract_agent import extract_paper_info,extract_patent_info
-from agent.doc_classifier import detect_doc_type
-from fastapi.middleware.cors import CORSMiddleware
+from openai import AsyncOpenAI  # 修改导入
+import pdfplumber
+
+# 加载环境变量（如果有）
 from dotenv import load_dotenv
 
+from llm.get_llm_key import get_llm_key
 
 load_dotenv()
 
-# FastAPI 应用实例
-app = FastAPI(
-    title="文档信息提取服务",
-    description="提供文档信息提取服务的API接口",
-    version="1.0.0"
-)
+app = FastAPI(title="文档信息提取服务", version="2.0.0")
 
-# 添加 CORS 中间件
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -29,86 +28,189 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 定义响应模型
-class ProcessResponse(BaseModel):
-    results: List[str]  # 处理后的结果列表
+# 初始化 OpenAI 客户端
+client = AsyncOpenAI(
+    base_url="https://api.rcouyi.com/v1",
+    api_key=get_llm_key()
+)
 
-# 异步处理上传文件的主逻辑
+class ValidityCheckRequest(BaseModel):
+    start_date: str = Field(..., description="起始日期 (YYYY-MM-DD)")
+    end_date: str = Field(..., description="结束日期 (YYYY-MM-DD)")
+    docs: List[Dict[str, Any]] = Field(..., description="已提取的文档结构化信息")
+
+class ValidityCheckResponse(BaseModel):
+    valid_docs: List[dict]
+    total_valid: int
+    time_range: str
+
+class ProcessResponse(BaseModel):
+    results: List[str]
+    data: List[dict]
+
+
+def parse_date(date_str: str) -> Optional[datetime]:
+    formats = [
+        "%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日",
+        "%Y.%m.%d", "%d-%m-%Y", "%d/%m/%Y",
+        "%b %d, %Y", "%B %d, %Y"
+    ]
+    for fmt in formats:
+        try:
+            return datetime.strptime(date_str, fmt)
+        except ValueError:
+            continue
+    return None
+
+def check_validity(item: dict, start_date: str, end_date: str) -> bool:
+    try:
+        start_dt = parse_date(start_date)
+        end_dt = parse_date(end_date)
+        if not all([start_dt, end_dt]):
+            return False
+
+        if item.get('类型') == '专利':
+            date_str = item.get('授权日期')
+            if date_str == 'N/A' or not date_str:  # 如果授权日期为 'N/A' 或为空
+                date_str = item.get('申请日期', 'N/A')
+        else:
+            year = item.get('年份')
+            date_str = f"{year}-01-01" if year and year != 'N/A' else None
+
+        doc_date = parse_date(date_str)
+        if not doc_date:
+            return False
+        return start_dt <= doc_date <= end_dt
+    except:
+        return False
+
+async def extract_info(text: str, doc_type: str) -> Dict[str, Any]:
+    if doc_type == '专利':
+        prompt = f"""
+        从以下专利文本中提取信息：
+        {text[:5000]}
+
+        请提取：
+        1. 专利号
+        2. 申请日期（YYYY-MM-DD）
+        3. 授权日期（如无则写N/A）
+        4. 发明人（逗号分隔）
+        5. 受让人（公司/机构）
+
+        返回 JSON 格式。
+        """
+    else:
+        prompt = f"""
+        从以下论文文本中提取信息：
+        {text[:5000]}
+
+        请提取：
+        1. 标题
+        2. 作者（分号分隔）
+        3. 期刊/会议名称
+        4. 发表年份（YYYY）
+        5. DOI（如无则写N/A）
+
+        返回 JSON 格式。
+        """
+
+    role = "你是一个信息提取专家"
+
+    response = await client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": role},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0,
+        response_format={"type": "json_object"}
+    )
+    return json.loads(response.choices[0].message.content)
+
+async def detect_doc_type(text: str) -> str:
+    prompt = f"""
+    分析以下文本，判断是专利、论文还是其他：
+    {text[:1000]}
+
+    返回：专利、论文、其他
+    """
+    response = await client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": "你是一个文档分类专家"},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0
+    )
+    return response.choices[0].message.content.strip()
+
 @app.post("/api/v1/process_files", response_model=ProcessResponse)
 async def process_files(files: List[UploadFile] = File(...)):
-    """处理上传的文档并提取信息"""
-    pdf_reader = PdfReader()  # 假设 PdfReader 是一个可以读取 PDF 文件的类
-    results = []
-
-    # 创建临时目录
+    pdf_reader = PdfReader()
     temp_dir = tempfile.mkdtemp()
+    results = []
+    structured_data = []
 
     try:
-        # 保存上传的文件到临时目录
         for file in files:
             file_path = os.path.join(temp_dir, file.filename)
+            print(f"处理中: {file.filename}")
             with open(file_path, "wb") as f:
                 shutil.copyfileobj(file.file, f)
 
-        # 处理临时目录中的所有文件
-        for filename in os.listdir(temp_dir):
-            file_path = os.path.join(temp_dir, filename)
-            if not filename.lower().endswith('.pdf'):
-                results.append(f"文件: {filename}\n错误: 非PDF文件\n{'=' * 40}")
-                continue
+            # text = pdf_reader.read(file_path)
 
-            try:
-                print(f"处理中: {filename}")
-                text = pdf_reader.read(file_path)  # 读取PDF内容
-                doc_type = await detect_doc_type(text)  # 异步检测文档类型
+            with pdfplumber.open(file_path) as pdf:
+                all_text = ""
+                for page in pdf.pages:
+                    text0 = page.extract_text()
+                    all_text += text0 + "\n"
+            text = all_text
 
-                if doc_type == "专":
-                    info = await extract_patent_info(text)  # 异步提取专利信息
-                    result = f"""
-                        文件: {filename}
-                        类型: 专利
-                        专利号: {info.get('专利号', 'N/A')}
-                        申请日期: {info.get('申请日期', 'N/A')}
-                        授权日期: {info.get('授权日期', 'N/A')}
-                        发明人: {info.get('发明人', 'N/A')}
-                        受让人: {info.get('受让人', 'N/A')}
-                        {"=" * 40}
-                    """
-                elif doc_type == "论":
-                    info = await extract_paper_info(text)  # 异步提取论文信息
-                    result = f"""
-                        文件: {filename}
-                        类型: 论文
-                        标题: {info.get('标题', 'N/A')}
-                        作者: {info.get('作者', 'N/A')}
-                        期刊: {info.get('期刊', 'N/A')}
-                        年份: {info.get('年份', 'N/A')}
-                        DOI: {info.get('DOI', 'N/A')}
-                        {"=" * 40}
-                    """
-                else:
-                    result = f"""
-                        文件: {filename}
-                        类型: 未识别
-                        {"=" * 40}
-                    """
-                results.append(result)
+            doc_type = await detect_doc_type(text)
 
-            except Exception as e:
-                results.append(f"\n文件: {filename}\n错误: {str(e)}\n{'=' * 40}")
-        # 写入结果
-        with open("output/提取结果.txt", 'w', encoding='utf-8') as f:
-            f.write("=== 文档信息提取报告 ===\n")
-            f.write("\n".join(results))
-        print(f"处理完成！结果保存至: output/提取结果.txt")
+            if doc_type == "专利":
+                info = await extract_info(text, "专利")
+                info.update({"文件名": file.filename, "类型": "专利"})
+                structured_data.append(info)
+                result = f"文件: {file.filename}\n类型: 专利\n专利号: {info.get('专利号')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'='*40}"
+
+            elif doc_type == "论文":
+                info = await extract_info(text, "论文")
+                info.update({"文件名": file.filename, "类型": "论文"})
+                structured_data.append(info)
+                result = f"文件: {file.filename}\n类型: 论文\n标题: {info.get('标题')}\n作者: {info.get('作者')}\n期刊: {info.get('期刊')}\n年份: {info.get('年份')}\nDOI: {info.get('DOI')}\n{'='*40}"
+
+            else:
+                # result = f"文件: {file.filename}\n类型: 未识别\n{'='*40}"
+                info = await extract_info(text, "专利")
+                info.update({"文件名": file.filename, "类型": "专利"})
+                structured_data.append(info)
+                result = f"文件: {file.filename}\n类型: 专利\n专利号: {info.get('专利号')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
+
+            results.append(result)
+
     finally:
-        # 清理临时目录
-        try:
-            shutil.rmtree(temp_dir)
-        except Exception:
-            pass
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
-    return ProcessResponse(results=results)
+    return ProcessResponse(results=results, data=structured_data)
+
+@app.post("/api/v1/check_validity", response_model=ValidityCheckResponse)
+async def check_documents_validity(request: ValidityCheckRequest):
+    start_dt = parse_date(request.start_date)
+    end_dt = parse_date(request.end_date)
+    if not all([start_dt, end_dt]):
+        raise HTTPException(status_code=400, detail="日期格式错误")
+    if start_dt > end_dt:
+        raise HTTPException(status_code=400, detail="起始日期不能晚于结束日期")
+
+    valid_docs = [doc for doc in request.docs if check_validity(doc, request.start_date, request.end_date)]
+
+    return ValidityCheckResponse(
+        valid_docs=valid_docs,
+        total_valid=len(valid_docs),
+        time_range=f"{request.start_date} 至 {request.end_date}"
+    )
 
 # 启动服务器
 if __name__ == "__main__":
