@@ -1,0 +1,11 @@
+openai
+aiohttp
+numpy
+fastapi
+uvicorn
+python-dotenv
+pydantic
+opencv-python
+python-multipart
+requests
+python-multipart
