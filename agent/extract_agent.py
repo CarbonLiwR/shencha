@@ -1,145 +1,85 @@
 import json
-import aiohttp
+from openai import AsyncOpenAI
+from typing import Dict, Any
 from llm.get_llm_key import get_llm_key
 
+# 初始化 OpenAI 客户端
+client = AsyncOpenAI(
+    base_url="https://api.rcouyi.com/v1",
+    api_key="sk-pAauG9ss64pQW9FVA703F1453b334eFb95B7447b9083BaBd"
+)
 
-# 异步发送 POST 请求
-async def send_async_request(url, headers, data):
-    async with aiohttp.ClientSession() as session:
-        async with session.post(url, headers=headers, json=data) as response:
-            if response.status == 200:
-                result = await response.json()
-                return result
-            else:
-                print(f"请求失败，状态码: {response.status}")
-                print(await response.text())
-                return None
+async def extract_info(text: str, doc_type: str) -> Dict[str, Any]:
+    if doc_type == '专利':
+        prompt = f"""
+        从以下专利文本中提取信息：
+        {text[:5000]}
 
+        请提取：
+        1. 专利号
+        2. 申请日期（YYYY-MM-DD）
+        3. 授权日期（如无则写N/A）
+        4. 发明人（逗号分隔）
+        5. 受让人（公司/机构）
 
-async def extract_patent_info(text):
-    """提取专利信息"""
-    # 初始化 OpenAI 客户端
-    api_key = get_llm_key()
-    # 构造请求数据
-    data = {
-        'model': "gpt-4o",
-        'response_format': {"type": "json_object"},
-        'messages': [
-            {
-                "role": "system",
-                "content": "你是一个专利信息提取专家"
-            },
-            {
-                "role": "user",
-                "content": f"""
-                从以下专利文本中提取信息：
-                {text[:5000]}
+        返回 JSON 格式。
+        """
+    if doc_type == '论文':
+        prompt = f"""
+            请从以下论文文本中精确提取信息：
+            {text[:5000]}
 
-                需要提取：
-                1. 专利号（如CN123456/US123456等）
-                2. 申请日期（格式：YYYY-MM-DD）
-                3. 授权日期（格式：YYYY-MM-DD）
-                4. 发明人（多个用逗号分隔）
-                5. 受让人（公司/机构）
+            要求返回严格JSON格式，包含以下字段：
+            1. 标题（必须提取）
+            2. 作者（分号分隔，如"张三; 李四; 王五"）
+            3. 期刊/会议名称（完整名称）
+            4. 发表年份（YYYY，必须从文本中提取）
+            5. DOI（完整格式，如"10.1002/ajh.27272"，若无则写N/A）
+            6. received_date（收稿日期，YYYY-MM-DD格式）
+            7. accepted_date（接受日期，YYYY-MM-DD格式）
+            8. published_date（出版日期，YYYY-MM-DD格式）
 
-                要求：
-                - 不存在则写"N/A"
-                - 用JSON返回，字段名如下：
-                {{
-                    "专利号": "",
-                    "申请日期": "",
-                    "授权日期": "",
-                    "发明人": "",
-                    "受让人": ""
-                }}
-                """
-            }
+            特别注意：
+            - 日期格式示例：Received:4December2023 → received_date: "2023-12-04"
+            - 必须包含所有8个字段，没有的字段写N/A
+            - 年份优先从出版日期提取，其次接受日期，最后收稿日期
+
+            示例格式：
+            {{
+              "标题": "Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia",
+              "作者": "Jiang Bin; Zhang San; Li Si",
+              "期刊": "American Journal of Hematology",
+              "year": 2024,
+              "DOI": "10.1002/ajh.27272",
+              "received_date": "2023-12-04",
+              "accepted_date": "2024-02-18",
+              "published_date": "2024-03-01"
+            }}
+            """
+
+    role = "你是一个信息提取专家"
+
+    response = await client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": role},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0,
+        response_format={"type": "json_object"}
+    )
+    result = json.loads(response.choices[0].message.content)
+
+    # 确保所有字段存在
+    if doc_type == '论文':
+        required_fields = [
+            '标题', '作者', '期刊', 'year',
+            'DOI', 'received_date', 'accepted_date', 'published_date'
         ]
-    }
+        for field in required_fields:
+            if field not in result:
+                result[field] = "N/A"
 
-    # 请求 URL 和头部
-    url = "https://api.rcouyi.com/v1/chat/completions"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}"
-    }
-
-    # 发送异步请求
-    result = await send_async_request(url, headers, data)
-
-    # 处理响应结果
-    if result:
-        content = result.get('choices', [{}])[0].get('message', {}).get('content', '')
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            print("[失败] 响应内容无法解析为JSON")
-            return None
-    else:
-        print("[失败] 未获取到有效响应")
-        return None
-
-
-
-async def extract_paper_info(text):
-    """提取论文信息"""
-    # 初始化 OpenAI 客户端
-    api_key = get_llm_key()
-    # 构造请求数据
-    data = {
-        'model': "gpt-4o",
-        'response_format': {"type": "json_object"},
-        'messages': [
-            {
-                "role": "system",
-                "content": "你是一个学术论文解析专家"
-            },
-            {
-                "role": "user",
-                "content": f"""
-                从以下论文文本中提取元数据：
-                {text[:5000]}
-
-                需要提取：
-                1. 标题
-                2. 作者（多个用逗号分隔）
-                3. 期刊/会议名称
-                4. 发表年份
-                5. DOI号
-
-                要求同上，JSON字段名如下：
-                {{
-                    "标题": "",
-                    "作者": "",
-                    "期刊": "",
-                    "年份": "",
-                    "DOI": ""
-                }}
-                """
-            }
-        ]
-    }
-
-    # 请求 URL 和头部
-    url = "https://api.rcouyi.com/v1/chat/completions"
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}"
-    }
-
-    # 发送异步请求
-    result = await send_async_request(url, headers, data)
-
-    # 处理响应结果
-    if result:
-        content = result.get('choices', [{}])[0].get('message', {}).get('content', '')
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError:
-            print("[失败] 响应内容无法解析为JSON")
-            return None
-    else:
-        print("[失败] 未获取到有效响应")
-        return None
+    return result
 
 

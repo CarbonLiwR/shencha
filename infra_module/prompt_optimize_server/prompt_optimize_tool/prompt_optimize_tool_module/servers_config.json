@@ -1,9 +1,0 @@
-{
-  "servers": [
-    {
-      "name": "PromptOptimizeServer",
-      "command": "uv",
-      "args": ["run", "./prompt_optimize_tool_module/server.py"]
-    }
-  ]
-}
