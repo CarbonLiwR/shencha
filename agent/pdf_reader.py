@@ -1,36 +1,29 @@
-import asyncio
 import base64
 import os
+
 import aiofiles
 import fitz
 import pdfplumber
-from fastapi import UploadFile, File
-from openai import AsyncOpenAI
-from tempfile import TemporaryDirectory
+
+from llm.get_llm_key import get_llm_key
+from llm.send_request import send_async_request
 
 
-async def pdf_text_reader(file: UploadFile, temp_dir: str) -> str:
+async def pdf_text_reader(temp_file_path: str) -> str:
     """
-    异步处理 PDF 文件，保存到临时目录并提取文本内容。
+    异步处理 PDF 文件，提取文本内容。
 
     Args:
-        file (UploadFile): FastAPI 上传的文件对象。
-        temp_dir (str): 临时目录路径。
+        temp_file_path (str): 临时文件路径。
 
     Returns:
         str: 提取的文本内容。
     """
-    file_path = os.path.join(temp_dir, file.filename)
-    print(f"处理中: {file.filename}")
-
-    # 异步保存文件
-    async with aiofiles.open(file_path, "wb") as f:
-        content = await file.read()
-        await f.write(content)
+    print(f"处理中: {temp_file_path}")
 
     # 提取 PDF 文本内容
     try:
-        with pdfplumber.open(file_path) as pdf:
+        with pdfplumber.open(temp_file_path) as pdf:
             all_text = ""
             for page in pdf.pages:
                 text0 = page.extract_text()
@@ -39,36 +32,6 @@ async def pdf_text_reader(file: UploadFile, temp_dir: str) -> str:
     except Exception as e:
         print(f"PDF解析失败: {e}")
         return ""
-
-# 初始化大模型客户端
-client = AsyncOpenAI(
-    base_url="https://api.rcouyi.com/v1",
-    api_key="sk-pAauG9ss64pW9FVA703F1453b334eFb95B7447b9083BaBd"
-)
-async def pdf_to_images(file_path: str, temp_dir: str) -> list:
-    """
-    将 PDF 转换为图片并保存到临时目录。
-
-    Args:
-        file_path (str): PDF 文件路径。
-        temp_dir (str): 临时目录路径。
-
-    Returns:
-        list: 保存的图片路径列表。
-    """
-    image_paths = []
-    try:
-        pdf_document = fitz.open(file_path)
-        for page_number in range(len(pdf_document)):
-            page = pdf_document.load_page(page_number)
-            pix = page.get_pixmap()
-            image_path = os.path.join(temp_dir, f"page_{page_number + 1}.png")
-            pix.save(image_path)
-            image_paths.append(image_path)
-        return image_paths
-    except Exception as e:
-        print(f"PDF 转图片失败: {e}")
-        return []
 
 
 async def image_to_base64(image_path: str) -> str:
@@ -100,48 +63,85 @@ async def extract_text_from_images(image_paths: list) -> str:
     all_text = ""
     for image_path in image_paths:
         base64_image = await image_to_base64(image_path)
-        prompt = "请从以下图片中提取文本内容："
+        api_key = get_llm_key()
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}"
+        }
+        url = "https://api.rcouyi.com/v1/chat/completions"
+        data = {
+            'model': "gpt-4.1",
+            'messages': [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "请给出图片中的文字(数字、中文、英文等）,不要给出任何解释",
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{base64_image}"},
+                        },
+                    ],
+                }
+            ],
+        }
         try:
-            response = await client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": "你是一个专业的 OCR 文本提取助手"},
-                    {"role": "user", "content": prompt},
-                    {"role": "user", "content": f"data:image/png;base64,{base64_image}"}
-                ],
-                temperature=0
-            )
-            page_text = response.choices[0].message.content
+            response = await send_async_request(url, headers, data)
+
+            page_text = response['choices'][0]['message']['content']
+            # print(f"提取文本内容: {page_text}")
             all_text += page_text + "\n"
         except Exception as e:
             print(f"图片 OCR 识别失败: {e}")
     return all_text
 
 
-async def pdf_pic_reader(file: UploadFile, temp_dir: str) -> str:
+async def pdf_pic_reader(temp_file_path: str) -> str:
     """
     异步处理 PDF 文件，转图片后使用 GPT 模型进行 OCR 识别并提取文本内容。
 
     Args:
-        file (UploadFile): FastAPI 上传的文件对象。
-        temp_dir (str): 临时目录路径。
+        temp_file_path (str): PDF 文件路径。
 
     Returns:
         str: 提取的文本内容。
     """
-    file_path = os.path.join(temp_dir, file.filename)
-    print(f"处理中: {file.filename}")
+    print(f"处理中: {temp_file_path}")
 
-    # 异步保存文件
-    async with aiofiles.open(file_path, "wb") as f:
-        content = await file.read()
-        await f.write(content)
+    # 获取 PDF 文件所在目录
+    pdf_dir = os.path.dirname(temp_file_path)
+    pdf_name = os.path.splitext(os.path.basename(temp_file_path))[0]  # 获取 PDF 文件名（无扩展名）
 
     # 转换 PDF 为图片
-    image_paths = await pdf_to_images(file_path, temp_dir)
-    if not image_paths:
+    image_paths = []
+    try:
+        pdf_document = fitz.open(temp_file_path)
+        for page_number in range(len(pdf_document)):
+            page = pdf_document.load_page(page_number)
+            zoom = 0.5  # 缩放比例，1表示原始分辨率，0.5表示降低分辨率，2表示提高分辨率
+            matrix = fitz.Matrix(zoom, zoom)
+            pix = page.get_pixmap(matrix=matrix)  # 应用缩放矩阵
+
+            # 图片保存路径：与 PDF 文件同目录，文件名为 PDF 文件名加页码
+            image_path = os.path.join(pdf_dir, f"{pdf_name}_page_{page_number + 1}.png")
+            # print(f"保存图片路径: {image_path}")
+            pix.save(image_path)
+            image_paths.append(image_path)
+
+        if not image_paths:
+            print("PDF 转图片失败，无法提取文本内容。")
+            return "PDF 转图片失败，无法提取文本内容。"
+    except Exception as e:
+        print(f"PDF 转图片失败: {e}")
         return "PDF 转图片失败，无法提取文本内容。"
 
     # 使用 GPT 模型对图片进行 OCR 识别
-    all_text = await extract_text_from_images(image_paths)
-    return all_text
+    try:
+        all_text = await extract_text_from_images(image_paths)
+        return all_text
+    except Exception as e:
+        print(f"OCR 识别失败: {e}")
+        return "OCR 识别失败，无法提取文本内容。"

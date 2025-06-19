@@ -35,7 +35,11 @@ const App: React.FC = () => {
         name: 'file',
         multiple: true,
         beforeUpload: (file: UploadFile) => {
-            // 阻止自动上传
+            if (file.size === 0) {
+                message.error('文件为空，请检查后重新上传！');
+                return false;
+            }
+            // console.log(`文件名：${file.name} 文件大小: ${file.size}, 文件类型: ${file.type}`);
             setFileList((prev) => [...prev, file]);
             return false;
         },
@@ -47,6 +51,7 @@ const App: React.FC = () => {
 
     // 点击上传按钮时触发的逻辑
     const handleUpload = async () => {
+
         if (fileList.length === 0) {
             message.warning('请先选择文件！');
             return;
@@ -60,6 +65,7 @@ const App: React.FC = () => {
             // 遍历文件列表并添加到 FormData
             fileList.forEach((file) => {
                 // console.log('上传的文件:', file); // 调试信息
+                // console.log(`文件名：${file.name}文件大小: ${file.size}`);
                 formData.append('files', file); // 直接使用 File 对象
             });
 

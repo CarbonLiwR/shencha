@@ -1,13 +1,9 @@
 import json
-from openai import AsyncOpenAI
 from typing import Dict, Any
-from llm.get_llm_key import get_llm_key
 
-# 初始化 OpenAI 客户端
-client = AsyncOpenAI(
-    base_url="https://api.rcouyi.com/v1",
-    api_key="sk-pAauG9ss64pQW9FVA703F1453b334eFb95B7447b9083BaBd"
-)
+from llm.get_llm_key import get_llm_key
+from llm.send_request import send_async_request
+
 
 async def extract_info(text: str, doc_type: str) -> Dict[str, Any]:
     if doc_type == '专利':
@@ -58,17 +54,25 @@ async def extract_info(text: str, doc_type: str) -> Dict[str, Any]:
             """
 
     role = "你是一个信息提取专家"
-
-    response = await client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
+    api_key = get_llm_key()
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    url = "https://api.rcouyi.com/v1/chat/completions"
+    data = {
+        'model': "gpt-4o",
+        'messages': [
             {"role": "system", "content": role},
             {"role": "user", "content": prompt}
         ],
-        temperature=0,
-        response_format={"type": "json_object"}
-    )
-    result = json.loads(response.choices[0].message.content)
+    }
+    response = await send_async_request(url, headers, data)
+    content = response['choices'][0]['message']['content']
+    if content.startswith("```json"):
+        content = content.strip("```json").strip("```")
+    result = json.loads(content)
+    # print("提取结果:", result)
 
     # 确保所有字段存在
     if doc_type == '论文':
@@ -81,5 +85,3 @@ async def extract_info(text: str, doc_type: str) -> Dict[str, Any]:
                 result[field] = "N/A"
 
     return result
-
-

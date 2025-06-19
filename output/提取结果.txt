@@ -1,9 +1,0 @@
-=== 文档信息提取报告 ===
-
-文件: 一种基于改进近似消息传递的心电信号重构方法.pdf
-错误: object str can't be used in 'await' expression
-========================================
-
-文件: 周博共一文章.pdf
-错误: object str can't be used in 'await' expression
-========================================

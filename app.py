@@ -1,8 +1,10 @@
+import os
 import shutil
 import tempfile
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 
+import aiofiles
 # 加载环境变量（如果有）
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, UploadFile, File
@@ -24,10 +26,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 class ValidityCheckRequest(BaseModel):
     start_date: str = Field(..., description="起始日期 (YYYY-MM-DD)")
     end_date: str = Field(..., description="结束日期 (YYYY-MM-DD)")
     docs: Dict[str, Dict[str, Dict[str, Any]]] = Field(..., description="已提取的文档结构化信息，包括专利和论文")
+
 
 class ValidityCheckResponse(BaseModel):
     valid_patents: List[Dict[str, Any]] = Field(..., description="有效的专利文档")
@@ -40,10 +44,10 @@ class ValidityCheckResponse(BaseModel):
     formatted_paper_results: List[str] = Field(..., description="论文的格式化结果")
 
 
-
 class ProcessResponse(BaseModel):
     results: Dict[str, str]  # 每个文件的结果以 id 为键
     data: Dict[str, dict]  # 每个文件的结构化数据以 id 为键
+
 
 def parse_date(date_str: str) -> Optional[datetime]:
     formats = [
@@ -57,6 +61,7 @@ def parse_date(date_str: str) -> Optional[datetime]:
         except ValueError:
             continue
     return None
+
 
 def check_validity(item: dict, start_date: str, end_date: str) -> bool:
     try:
@@ -100,6 +105,8 @@ def check_validity(item: dict, start_date: str, end_date: str) -> bool:
     except Exception as e:
         print(f"时效检查错误: {e}")
         return False
+
+
 @app.post("/api/v1/process_files", response_model=ProcessResponse)
 async def process_files(files: List[UploadFile] = File(...)):
     temp_dir = tempfile.mkdtemp()  # 创建临时目录
@@ -109,8 +116,18 @@ async def process_files(files: List[UploadFile] = File(...)):
     try:
         for idx, file in enumerate(files, start=1):
             file_id = f"id{idx}"
+            temp_file_path = os.path.join(temp_dir, file.filename)
+            async with aiofiles.open(temp_file_path, "wb") as f:
+                file.file.seek(0)  # 重置文件指针到开头
+                content = await file.read()  # 读取文件内容
+                await f.write(content)  # 写入文件内容到临时文件
+
             # 第一次尝试提取文本
-            text = await pdf_text_reader(file, temp_dir)
+            try:
+                text = await pdf_text_reader(temp_file_path)  # 修改为直接处理临时文件路径
+            except Exception as e:
+                print(f"PDF解析失败: {e}")
+                text = None
 
             # 检测文档类型
             doc_type = await detect_doc_type(text)
@@ -122,7 +139,6 @@ async def process_files(files: List[UploadFile] = File(...)):
                 info.update({"文件名": file.filename, "类型": "专利"})
                 structured_data[file_id] = info
                 result = f"文件: {file.filename}\n类型: 专利\n专利号: {info.get('专利号')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
-
             elif doc_type == "论文":
                 # 提取论文信息
                 info = await extract_info(text, "论文")
@@ -140,9 +156,13 @@ async def process_files(files: List[UploadFile] = File(...)):
                         出版日期: {info.get('published_date', 'N/A')}
                         {'=' * 40}"""
             else:
-                # 类型未识别，调用 pdf_pic_reader 提取文本
                 print(f"未识别的文档类型，尝试通过图片提取文本: {file.filename}")
-                text = await pdf_pic_reader(file, temp_dir)  # 使用图片提取文本
+                # 类型未识别，调用 pdf_pic_reader 提取文本
+                try:
+                    text = await pdf_pic_reader(temp_file_path)  # 修改为直接处理临时文件路径
+                except Exception as e:
+                    print(f"PDF 转图片失败: {e}")
+                    text = None
 
                 # 重新检测文档类型
                 doc_type = await detect_doc_type(text)
@@ -178,13 +198,12 @@ async def process_files(files: List[UploadFile] = File(...)):
 
             # 保存结果
             results[file_id] = result
-            print(result)
-
     finally:
         # 清理临时目录
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     return ProcessResponse(results=results, data=structured_data)
+
 
 @app.post("/api/v1/check_validity", response_model=ValidityCheckResponse)
 async def check_documents_validity(request: ValidityCheckRequest):
@@ -199,7 +218,7 @@ async def check_documents_validity(request: ValidityCheckRequest):
 
     # 初始化结果存储
     valid_patents = []  # 存储有效的专利文档
-    valid_papers = []   # 存储有效的论文文档
+    valid_papers = []  # 存储有效的论文文档
     formatted_patent_results = []  # 存储专利的格式化结果
     formatted_paper_results = []  # 存储论文的格式化结果
     date_comparisons = []  # 存储日期比较结果
@@ -283,6 +302,7 @@ async def check_documents_validity(request: ValidityCheckRequest):
         formatted_patent_results=formatted_patent_results,
         formatted_paper_results=formatted_paper_results
     )
+
 
 # 启动服务器
 if __name__ == "__main__":

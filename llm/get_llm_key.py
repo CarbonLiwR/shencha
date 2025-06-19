@@ -1,7 +1,7 @@
+import ast
+import json
 import os
 import random
-import json
-import ast
 
 
 def get_llm_key():
@@ -39,7 +39,6 @@ def get_llm_key():
         # 打印错误并回退到单个 OPENAI_KEY
         print(f"获取 OpenAI API Key 时出错：{e}")
         return os.getenv("OPENAI_KEY")
-
 
 # =========================
 # 测试示例（可选）：
