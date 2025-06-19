@@ -23,3 +23,9 @@ cd frontend
 npm install
 npm run dev
 ```
+
+### 测试用例使用
+
+```commandline
+python test_api_all.py
+```

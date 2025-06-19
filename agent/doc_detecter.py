@@ -24,5 +24,5 @@ async def detect_doc_type(text: str) -> str:
         ],
     }
     response = await send_async_request(url, headers, data)
-    print("response", response['choices'][0]['message']['content'])
+    # print("response", response['choices'][0]['message']['content'])
     return response['choices'][0]['message']['content'].strip()

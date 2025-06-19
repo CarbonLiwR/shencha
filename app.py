@@ -131,7 +131,7 @@ async def process_files(files: List[UploadFile] = File(...)):
 
             # 检测文档类型
             doc_type = await detect_doc_type(text)
-            print("doc_type", doc_type)
+            # print("doc_type", doc_type)
 
             if doc_type == "专利":
                 # 提取专利信息
@@ -166,7 +166,7 @@ async def process_files(files: List[UploadFile] = File(...)):
 
                 # 重新检测文档类型
                 doc_type = await detect_doc_type(text)
-                print("重新检测的 doc_type", doc_type)
+                # print("重新检测的 doc_type", doc_type)
 
                 if doc_type == "专利":
                     # 提取专利信息
