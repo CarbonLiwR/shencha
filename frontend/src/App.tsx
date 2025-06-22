@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
-import {InboxOutlined} from '@ant-design/icons';
-import {Button, Col, DatePicker, Layout, message, Row, Space, Typography, Upload, type UploadFile} from 'antd';
+import {CloseOutlined, InboxOutlined, LinkOutlined} from '@ant-design/icons';
+import {Button, Col, DatePicker, Input, Layout, message, Row, Space, Typography, Upload, type UploadFile} from 'antd';
 import axios from 'axios';
 
 const {Dragger} = Upload;
@@ -31,6 +31,7 @@ const App: React.FC = () => {
     });
     const [timeCheckPaperResult, setTimeCheckPaperResult] = useState<string | null>(null); // 存储符合条件的论文结果
     const [timeCheckPatentResult, setTimeCheckPatentResult] = useState<string | null>(null); // 存储符合条件的专利结果
+    const [urlInput, setUrlInput] = useState(''); // 存储用户输入的URL
     const uploadProps = {
         name: 'file',
         multiple: true,
@@ -43,41 +44,124 @@ const App: React.FC = () => {
             setFileList((prev) => [...prev, file]);
             return false;
         },
-        onRemove: (file: UploadFile) => {
-            // 移除文件
-            setFileList((prev) => prev.filter((item) => item.uid !== file.uid));
-        },
+    };
+    const handleUrlInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setUrlInput(e.target.value);
+    };
+
+    // 添加URL文件
+    const handleAddUrl = () => {
+        if (!urlInput) {
+            message.warning('请输入有效的URL！');
+            return;
+        }
+
+        try {
+            // 验证URL格式
+            new URL(urlInput);
+        } catch (e) {
+            message.error('请输入有效的URL格式！');
+            return;
+        }
+
+        // 从URL中提取文件名，如果没有则使用默认名
+        const getDecodedFilename = (url: string) => {
+            try {
+                // 获取URL最后一部分（文件名）
+                const encodedFilename = url.split('/').pop() || '';
+                // 解码百分号编码（如%E6%95%B0%E5%AD%97 → "数字"）
+                let decodedFilename = decodeURIComponent(encodedFilename);
+
+                // 移除可能存在的查询参数（如?xxx=yyy）
+                decodedFilename = decodedFilename.split('?')[0];
+                // 移除可能存在的哈希参数（如#zzz）
+                decodedFilename = decodedFilename.split('#')[0];
+
+                // 如果解码后为空，使用默认名
+                return decodedFilename || `下载文件-${Date.now()}.pdf`;
+            } catch (e) {
+                // 如果解码失败（如无效编码），使用原始文件名
+                console.error('文件名解码失败:', e);
+                return url.split('/').pop() || `下载文件-${Date.now()}.pdf`;
+            }
+        };
+
+        const fileName = getDecodedFilename(urlInput);
+
+        // 创建一个符合常规文件格式的对象
+        const urlFile: UploadFile = {
+            uid: `url-${Date.now()}`,
+            name: fileName,  // 使用提取或生成的文件名
+            size: 0,
+            type: 'url',
+            status: 'done',
+            url: urlInput,  // 保留原始URL
+        };
+        setFileList((prev) => [...prev, urlFile]);
+        setUrlInput('');
+        message.success('URL已添加！');
+    };
+
+    const handleRemoveItem = (uid: string) => {
+        setFileList((prev) => prev.filter((item) => item.uid !== uid));
     };
 
     // 点击上传按钮时触发的逻辑
     const handleUpload = async () => {
-
         if (fileList.length === 0) {
             message.warning('请先选择文件！');
             return;
         }
-
         setUploading(true); // 开始上传时设置按钮为加载状态
-
         try {
             const formData = new FormData();
-
-            // 遍历文件列表并添加到 FormData
             fileList.forEach((file) => {
-                // console.log('上传的文件:', file); // 调试信息
-                // console.log(`文件名：${file.name}文件大小: ${file.size}`);
-                formData.append('files', file); // 直接使用 File 对象
+                // 对于URL文件，创建一个包含URL信息的Blob对象
+                if (file.type === 'url') {
+                    const urlInfo = {
+                        url: file.url,
+                        name: file.name,
+                        type: 'url'
+                    };
+                    const blob = new Blob([JSON.stringify(urlInfo)], {
+                        type: 'application/json'
+                    });
+                    formData.append('files', blob, file.name);
+                } else {
+                    // 普通文件直接添加
+                    if (file.originFileObj instanceof Blob) {
+                        formData.append('files', file.originFileObj, file.name);
+                    } else {
+                        // 如果originFileObj不存在，尝试从file对象创建Blob
+                        const blob = new Blob([file as any], {type: file.type});
+                        formData.append('files', blob, file.name);
+                    }
+                }
             });
+            // console.log('最终提交的FormData内容:');
+            // for (const [key, value] of formData.entries()) {
+            //     console.log(key, value);
+            // }
 
             // 发送 POST 请求到后端服务
             const response = await axios.post('http://127.0.0.1:8000/api/v1/process_files', formData, {
                 headers: {
                     'Content-Type': 'multipart/form-data', // 确保使用正确的 Content-Type
                 },
+                validateStatus: (status) => status < 500
             });
             console.log(response);
 
-
+            if (response.status === 400) {
+                const errorData = response.data?.detail || response.data;
+                throw {
+                    isAxiosError: true,
+                    response: {
+                        status: 400,
+                        data: errorData
+                    }
+                };
+            }
             if (response.data && response.data.results && response.data.data) {
                 const results = response.data.results; // 处理结果
                 const data = response.data.data; // 结构化数据
@@ -122,15 +206,28 @@ const App: React.FC = () => {
                 message.error('后端未返回处理结果，请检查后端代码！');
             }
         } catch (error: any) {
-            console.error('文件上传失败:', error);
+            // 修改：增强错误处理
+            if (axios.isAxiosError(error)) {
+                const errorData = error.response?.data?.detail || error.response?.data;
 
-            if (error.response && error.response.status === 422) {
-                message.error('文件格式错误或请求数据不符合后端要求！');
+                if (error.response?.status === 400 && errorData?.error === 'URL_DOWNLOAD_FAILED') {
+                    message.error(`文件下载失败: ${errorData.message}`);
+                    // 标记失败文件
+                    setFileList(prev => prev.map(f =>
+                        f.name === errorData.filename ? {
+                            ...f,
+                            status: 'error',
+                            response: errorData.message
+                        } : f
+                    ));
+                } else {
+                    message.error(errorData?.message || '文件处理失败');
+                }
             } else {
-                message.error('文件上传失败，请检查网络或后端服务！');
+                message.error(error.message || '网络错误');
             }
         } finally {
-            setUploading(false); // 上传完成后恢复按钮状态
+            setUploading(false);
         }
     };
     // 时间选择框的回调
@@ -199,7 +296,8 @@ const App: React.FC = () => {
                         padding: '16px',
                         display: 'flex',
                         flexDirection: 'column',
-                        justifyContent: 'space-between',
+                        height: '100%',
+                        // justifyContent: 'space-between',
                     }}>
                         <Title level={5}>上传框</Title>
                         <div
@@ -212,6 +310,7 @@ const App: React.FC = () => {
                             }}
                         >
                             <Dragger
+                                showUploadList={false}
                                 {...uploadProps}
                             >
                                 <p className="ant-upload-drag-icon">
@@ -221,11 +320,66 @@ const App: React.FC = () => {
                                 <p className="ant-upload-hint">支持单个或批量上传。</p>
                             </Dragger>
                         </div>
+                        <div style={{marginBottom: '16px'}}>
+                            <Title level={5} style={{marginBottom: '8px'}}>或输入URL</Title>
+                            <Space.Compact style={{width: '100%'}}>
+                                <Input
+                                    placeholder="输入文件URL"
+                                    prefix={<LinkOutlined/>}
+                                    value={urlInput}
+                                    onChange={handleUrlInput}
+                                />
+                                <Button type="primary" onClick={handleAddUrl}>
+                                    添加
+                                </Button>
+                            </Space.Compact>
+                        </div>
+                        <Title level={5}>已添加项</Title>
+                        <div style={{
+                            border: '1px dashed #d9d9d9',
+                            borderRadius: '4px',
+                            padding: '8px',
+                            maxHeight: '40vh',
+                            overflowY: 'auto',
+                            marginBottom: '16px'
+                        }}>
+                            {fileList.length === 0 ? (
+                                <div style={{color: 'rgba(0, 0, 0, 0.25)', textAlign: 'center'}}>暂无内容</div>
+                            ) : (
+                                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                                    {fileList.map(item => (
+                                        <div key={item.uid} style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            padding: '4px 8px',
+                                            backgroundColor: '#fafafa',
+                                            borderRadius: '4px'
+                                        }}>
+                                            <span style={{flex: 1, overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                                                {item.type === 'url' ? (
+                                                    <LinkOutlined style={{marginRight: '8px', color: '#1890ff'}}/>
+                                                ) : (
+                                                    <InboxOutlined style={{marginRight: '8px'}}/>
+                                                )}
+                                                {item.name}
+                                            </span>
+                                            <Button
+                                                type="text"
+                                                icon={<CloseOutlined/>}
+                                                onClick={() => handleRemoveItem(item.uid)}
+                                                size="small"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                         <Button
                             type="primary"
                             onClick={handleUpload}
                             loading={uploading} // 按钮的加载状态
-                            style={{marginTop: '16px'}}
+                            style={{justifyContent: 'center', bottom: '0'}}
                         >
                             {uploading ? '处理中...' : '上传'}
                         </Button>

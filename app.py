@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import tempfile
@@ -5,6 +6,7 @@ from datetime import datetime
 from typing import List, Dict, Any, Optional
 
 import aiofiles
+import aiohttp
 # 加载环境变量（如果有）
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, UploadFile, File
@@ -13,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from agent.doc_detecter import detect_doc_type
 from agent.extract_agent import extract_info
-from agent.pdf_reader import pdf_text_reader, pdf_pic_reader
+from agent.pdf_reader import pdf_text_reader
 
 load_dotenv()
 app = FastAPI(title="文档信息提取服务", version="2.0.0")
@@ -47,6 +49,52 @@ class ValidityCheckResponse(BaseModel):
 class ProcessResponse(BaseModel):
     results: Dict[str, str]  # 每个文件的结果以 id 为键
     data: Dict[str, dict]  # 每个文件的结构化数据以 id 为键
+
+
+async def download_from_url(url: str, save_path: str) -> bool:
+    """下载文件并显示进度信息"""
+    try:
+        print(f"⏳ 开始下载: {url}")
+        print(f"📁 保存路径: {save_path}")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    # 获取文件大小（可能不可用）
+                    file_size = int(response.headers.get('content-length', 0))
+
+                    # 显示下载基本信息
+                    print(f"📦 文件大小: {file_size / 1024:.2f} KB" if file_size else "📦 文件大小: 未知")
+
+                    content = b''
+                    downloaded = 0
+                    async for chunk in response.content.iter_chunked(1024 * 8):  # 8KB chunks
+                        content += chunk
+                        downloaded += len(chunk)
+
+                        # 显示下载进度（如果有文件大小信息）
+                        if file_size > 0:
+                            percent = downloaded / file_size * 100
+                            print(f"⬇️ 下载进度: {percent:.1f}% ({downloaded}/{file_size} bytes)", end='\r')
+
+                    # 保存文件
+                    async with aiofiles.open(save_path, "wb") as f:
+                        await f.write(content)
+
+                    print(f"\n✅ 下载完成: {url}")
+                    return True
+
+                print(f"❌ 下载失败: HTTP状态码 {response.status}")
+                return False
+
+    except aiohttp.ClientError as e:
+        print(f"❌ 网络错误: {str(e)}")
+    except IOError as e:
+        print(f"❌ 文件保存错误: {str(e)}")
+    except Exception as e:
+        print(f"❌ 未知错误: {str(e)}")
+
+    return False
 
 
 def parse_date(date_str: str) -> Optional[datetime]:
@@ -109,7 +157,7 @@ def check_validity(item: dict, start_date: str, end_date: str) -> bool:
 
 @app.post("/api/v1/process_files", response_model=ProcessResponse)
 async def process_files(files: List[UploadFile] = File(...)):
-    temp_dir = tempfile.mkdtemp()  # 创建临时目录
+    temp_dir = tempfile.mkdtemp()
     results = {}
     structured_data = {}
 
@@ -117,21 +165,71 @@ async def process_files(files: List[UploadFile] = File(...)):
         for idx, file in enumerate(files, start=1):
             file_id = f"id{idx}"
             temp_file_path = os.path.join(temp_dir, file.filename)
-            async with aiofiles.open(temp_file_path, "wb") as f:
-                file.file.seek(0)  # 重置文件指针到开头
-                content = await file.read()  # 读取文件内容
-                await f.write(content)  # 写入文件内容到临时文件
+            url = None
+            is_url = False
 
-            # 第一次尝试提取文本
+            # 改进的URL文件判断逻辑
             try:
-                text = await pdf_text_reader(temp_file_path)  # 修改为直接处理临时文件路径
-            except Exception as e:
-                print(f"PDF解析失败: {e}")
-                text = None
+                # 方法1：检查type属性
+                if getattr(file, 'type', None) == 'url':
+                    is_url = True
+                    url = getattr(file, 'url', '')
 
-            # 检测文档类型
+                # 方法2：检查文件内容是否为JSON格式的URL信息
+                if not is_url:
+                    content = await file.read()
+                    try:
+                        url_info = json.loads(content)
+                        if isinstance(url_info, dict) and 'url' in url_info:
+                            is_url = True
+                            url = url_info['url']
+                    except json.JSONDecodeError:
+                        pass
+                    await file.seek(0)  # 重置文件指针
+            except Exception as e:
+                pass
+
+            # 文件内容获取逻辑
+            try:
+                if is_url and url:
+                    print(f"下载URL文件: {url}")
+                    if not await download_from_url(url, temp_file_path):
+                        # 修改为返回结构化错误信息
+                        raise HTTPException(
+                            status_code=400,
+                            detail={
+                                "error": "URL_DOWNLOAD_FAILED",
+                                "message": f"URL文件下载失败: {url}",
+                                "filename": file.filename,
+                                "url": url,
+                                "file_id": file_id
+                            }
+                        )
+
+                else:
+                    # 普通文件处理
+                    async with aiofiles.open(temp_file_path, "wb") as f:
+                        await file.seek(0)
+                        content = await file.read()
+                        await f.write(content)
+            except HTTPException as e:
+                # 直接重新抛出HTTPException
+                raise e
+            except Exception as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "FILE_PROCESSING_ERROR",
+                        "message": str(e),
+                        "filename": file.filename,
+                        "file_id": file_id,
+                        **({"url": url} if is_url else {})
+                    }
+                )
+
+            # 后续处理保持不变...
+            text = await pdf_text_reader(temp_file_path)
             doc_type = await detect_doc_type(text)
-            # print("doc_type", doc_type)
 
             if doc_type == "专利":
                 # 提取专利信息
@@ -139,6 +237,7 @@ async def process_files(files: List[UploadFile] = File(...)):
                 info.update({"文件名": file.filename, "类型": "专利"})
                 structured_data[file_id] = info
                 result = f"文件: {file.filename}\n类型: 专利\n专利号: {info.get('专利号')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
+
             elif doc_type == "论文":
                 # 提取论文信息
                 info = await extract_info(text, "论文")
@@ -156,45 +255,9 @@ async def process_files(files: List[UploadFile] = File(...)):
                         出版日期: {info.get('published_date', 'N/A')}
                         {'=' * 40}"""
             else:
-                print(f"未识别的文档类型，尝试通过图片提取文本: {file.filename}")
-                # 类型未识别，调用 pdf_pic_reader 提取文本
-                try:
-                    text = await pdf_pic_reader(temp_file_path)  # 修改为直接处理临时文件路径
-                except Exception as e:
-                    print(f"PDF 转图片失败: {e}")
-                    text = None
-
-                # 重新检测文档类型
-                doc_type = await detect_doc_type(text)
-                # print("重新检测的 doc_type", doc_type)
-
-                if doc_type == "专利":
-                    # 提取专利信息
-                    info = await extract_info(text, "专利")
-                    info.update({"文件名": file.filename, "类型": "专利"})
-                    structured_data[file_id] = info
-                    result = f"文件: {file.filename}\n类型: 专利\n专利号: {info.get('专利号')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
-
-                elif doc_type == "论文":
-                    # 提取论文信息
-                    info = await extract_info(text, "论文")
-                    info.update({"文件名": file.filename, "类型": "论文"})
-                    structured_data[file_id] = info
-                    result = f"""文件: {file.filename}
-                            类型: 论文
-                            标题: {info.get('标题', 'N/A')}
-                            作者: {info.get('作者', 'N/A')}
-                            期刊: {info.get('期刊', 'N/A')}
-                            年份: {str(info.get('year', 'N/A'))}
-                            DOI: {info.get('DOI', 'N/A')}
-                            收稿日期: {info.get('received_date', 'N/A')}
-                            接受日期: {info.get('accepted_date', 'N/A')}
-                            出版日期: {info.get('published_date', 'N/A')}
-                            {'=' * 40}"""
-                else:
-                    # 如果仍未识别，则标记为未识别
-                    result = f"文件: {file.filename}\n类型: 未识别\n{'=' * 40}"
-                    structured_data[file_id] = {"文件名": file.filename, "类型": "未识别"}
+                # 如果仍未识别，则标记为未识别
+                result = f"文件: {file.filename}\n类型: 未识别\n{'=' * 40}"
+                structured_data[file_id] = {"文件名": file.filename, "类型": "未识别"}
 
             # 保存结果
             results[file_id] = result
