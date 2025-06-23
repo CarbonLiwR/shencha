@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from agent.doc_detecter import detect_doc_type
 from agent.extract_agent import extract_info
-from agent.pdf_reader import pdf_text_reader
+from agent.pdf_reader import pdf_text_reader, pdf_pic_reader
 
 load_dotenv()
 app = FastAPI(title="文档信息提取服务", version="2.0.0")
@@ -255,9 +255,45 @@ async def process_files(files: List[UploadFile] = File(...)):
                         出版日期: {info.get('published_date', 'N/A')}
                         {'=' * 40}"""
             else:
-                # 如果仍未识别，则标记为未识别
-                result = f"文件: {file.filename}\n类型: 未识别\n{'=' * 40}"
-                structured_data[file_id] = {"文件名": file.filename, "类型": "未识别"}
+                # 类型未识别，调用 pdf_pic_reader 提取文本
+                print(f"未识别的文档类型，尝试通过图片提取文本: {file.filename}")
+                try:
+                    text = await pdf_pic_reader(temp_file_path)  # 修改为直接处理临时文件路径
+                except Exception as e:
+                    print(f"PDF 转图片失败: {e}")
+                    text = None
+
+                # 重新检测文档类型
+                doc_type = await detect_doc_type(text) if text else "其他"
+                print("重新检测的 doc_type", doc_type)
+
+                if doc_type == "专利":
+                    # 提取专利信息
+                    info = await extract_info(text, "专利")
+                    info.update({"文件名": file.filename, "类型": "专利"})
+                    structured_data[file_id] = info
+                    result = f"文件: {file.filename}\n类型: 专利\n专利号: {info.get('专利号')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
+
+                elif doc_type == "论文":
+                    # 提取论文信息
+                    info = await extract_info(text, "论文")
+                    info.update({"文件名": file.filename, "类型": "论文"})
+                    structured_data[file_id] = info
+                    result = f"""文件: {file.filename}
+                                            类型: 论文
+                                            标题: {info.get('标题', 'N/A')}
+                                            作者: {info.get('作者', 'N/A')}
+                                            期刊: {info.get('期刊', 'N/A')}
+                                            年份: {str(info.get('year', 'N/A'))}
+                                            DOI: {info.get('DOI', 'N/A')}
+                                            收稿日期: {info.get('received_date', 'N/A')}
+                                            接受日期: {info.get('accepted_date', 'N/A')}
+                                            出版日期: {info.get('published_date', 'N/A')}
+                                            {'=' * 40}"""
+                else:
+                    # 如果仍未识别，则标记为未识别
+                    result = f"文件: {file.filename}\n类型: 未识别\n{'=' * 40}"
+                    structured_data[file_id] = {"文件名": file.filename, "类型": "未识别"}
 
             # 保存结果
             results[file_id] = result
