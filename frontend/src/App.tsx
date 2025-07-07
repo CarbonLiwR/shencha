@@ -13,10 +13,12 @@ const App: React.FC = () => {
     const [processedResults, setProcessedResults] = useState<{
         patentResults: string[];
         paperResults: string[];
+        standardResults: string[];
         unrecognizedResults: string[];
     }>({
         patentResults: [],
         paperResults: [],
+        standardResults: [],
         unrecognizedResults: [],
     });
     const [selectedTimeRange, setSelectedTimeRange] = useState<[string, string] | null>(null);
@@ -25,12 +27,15 @@ const App: React.FC = () => {
     const [extractedDocs, setExtractedDocs] = useState<{
         paperData: Record<string, any>; // 论文数据，键为文档 ID，值为对应的文档内容
         patentData: Record<string, any>; // 专利数据，键为文档 ID，值为对应的文档内容
+        standardData: Record<string, any>;// 标准数据，键为文档 ID，值为对应的文档内容
     }>({
         paperData: {}, // 初始化为空对象
         patentData: {}, // 初始化为空对象
+        standardData: {},// 初始化为空对象
     });
     const [timeCheckPaperResult, setTimeCheckPaperResult] = useState<string | null>(null); // 存储符合条件的论文结果
     const [timeCheckPatentResult, setTimeCheckPatentResult] = useState<string | null>(null); // 存储符合条件的专利结果
+    const [timeCheckStandardResult, setTimeCheckStandardResult] = useState<string | null>(null);
     const [urlInput, setUrlInput] = useState(''); // 存储用户输入的URL
     const uploadProps = {
         name: 'file',
@@ -169,11 +174,13 @@ const App: React.FC = () => {
                 // 分类结果
                 const patentResults: string[] = [];
                 const paperResults: string[] = [];
+                const standardResults: string[] = [];
                 const unrecognizedResults: string[] = [];
 
 
                 const paperData: Record<string, any> = {}; // 论文数据
                 const patentData: Record<string, any> = {}; // 专利数据
+                const standardData: Record<string, any> = {};// 标准数据
 
                 Object.keys(data).forEach((id) => {
                     const item = data[id]; // 获取每个文档的结构化数据
@@ -185,6 +192,9 @@ const App: React.FC = () => {
                     } else if (item.类型 === '论文') {
                         paperResults.push(result);
                         paperData[id] = item; // 将论文数据存入字典
+                    } else if (item.类型 === '标准') { // 新增标准处理
+                        standardResults.push(result);
+                        standardData[id] = item;
                     } else {
                         unrecognizedResults.push(result);
                     }
@@ -193,12 +203,14 @@ const App: React.FC = () => {
                 setProcessedResults({
                     patentResults,
                     paperResults,
+                    standardResults,
                     unrecognizedResults,
                 });
 
                 setExtractedDocs({
                     paperData,
                     patentData,
+                    standardData,
                 });
 
                 message.success('文件上传成功并处理完成！');
@@ -254,7 +266,7 @@ const App: React.FC = () => {
             });
 
             if (response.data) {
-                const {valid_papers, valid_patents} = response.data;
+                const {valid_papers, valid_patents, valid_standards} = response.data;
 
                 // 更新状态，将论文和专利的结果分别存储
                 const paperResults = valid_papers.map((doc: any, index: number) => (
@@ -271,9 +283,18 @@ const App: React.FC = () => {
                         申请日期: {doc["申请日期"]}, 授权日期: {doc["授权日期"]}
                     </p>
                 ));
+                // 新增标准结果处理
+                const standardResults = valid_standards?.map((doc: any, index: number) => (
+                    <p key={index}>
+                        文件名: {doc["文件名"]}, 标准名称: {doc["标准名称"]},
+                        标准编号: {doc["标准编号"]}, 发布单位: {doc["发布单位"]},
+                        发布时间: {doc["发布时间"]}, 实施时间: {doc["实施时间"]}
+                    </p>
+                )) ;
 
                 setTimeCheckPaperResult(paperResults); // 更新论文结果
                 setTimeCheckPatentResult(patentResults); // 更新专利结果
+                setTimeCheckStandardResult(standardResults);
 
                 message.success(`时间范围检查完成，总计有效文档: ${response.data.total_valid}`);
             } else {
@@ -388,7 +409,7 @@ const App: React.FC = () => {
                     {/* 右侧结果与时间选择区域 */}
                     <Col span={16} style={{padding: '16px'}}>
                         <Row style={{height: '50%', marginBottom: '16px'}}>
-                            <Col span={8}>
+                            <Col span={6}>
                                 <Title level={5}>论文结果</Title>
                                 <div style={{
                                     border: '1px solid #d9d9d9',
@@ -404,7 +425,7 @@ const App: React.FC = () => {
                                     )}
                                 </div>
                             </Col>
-                            <Col span={8}>
+                            <Col span={6}>
                                 <Title level={5}>专利结果</Title>
                                 <div style={{
                                     border: '1px solid #d9d9d9',
@@ -420,7 +441,23 @@ const App: React.FC = () => {
                                     )}
                                 </div>
                             </Col>
-                            <Col span={8}>
+                            <Col span={6}>
+                                <Title level={5}>标准结果</Title>
+                                <div style={{
+                                    border: '1px solid #d9d9d9',
+                                    height: '38vh',
+                                    overflow: 'auto',
+                                    padding: '8px'
+                                }}>
+                                    {processedResults.standardResults.length > 0 ? (
+                                        processedResults.standardResults.map((result, index) => <p
+                                            key={index}>{result}</p>)
+                                    ) : (
+                                        <p>暂无标准结果</p>
+                                    )}
+                                </div>
+                            </Col>
+                            <Col span={6}>
                                 <Title level={5}>其他文件结果</Title>
                                 <div style={{
                                     border: '1px solid #d9d9d9',
@@ -454,7 +491,7 @@ const App: React.FC = () => {
                             </Col>
                         </Row>
                         <Row style={{height: '35%', paddingTop: '16px'}}>
-                            <Col span={12} style={{paddingRight: '8px'}}>
+                            <Col span={8} style={{paddingRight: '8px'}}>
                                 <Title level={5}>符合条件的论文</Title>
                                 <div style={{
                                     border: '1px solid #d9d9d9',
@@ -465,7 +502,7 @@ const App: React.FC = () => {
                                     {timeCheckPaperResult ? timeCheckPaperResult : <p>暂无符合条件的论文结果</p>}
                                 </div>
                             </Col>
-                            <Col span={12} style={{paddingLeft: '8px'}}>
+                            <Col span={8} style={{paddingLeft: '8px'}}>
                                 <Title level={5}>符合条件的专利</Title>
                                 <div style={{
                                     border: '1px solid #d9d9d9',
@@ -474,6 +511,17 @@ const App: React.FC = () => {
                                     padding: '8px'
                                 }}>
                                     {timeCheckPatentResult ? timeCheckPatentResult : <p>暂无符合条件的专利结果</p>}
+                                </div>
+                            </Col>
+                            <Col span={8} style={{paddingLeft: '8px'}}>
+                                <Title level={5}>符合条件的标准</Title>
+                                <div style={{
+                                    border: '1px solid #d9d9d9',
+                                    height: '100%',
+                                    overflow: 'auto',
+                                    padding: '8px'
+                                }}>
+                                    {timeCheckStandardResult ? timeCheckStandardResult : <p>暂无符合条件的标准结果</p>}
                                 </div>
                             </Col>
                         </Row>

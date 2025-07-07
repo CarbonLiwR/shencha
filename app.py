@@ -36,14 +36,16 @@ class ValidityCheckRequest(BaseModel):
 
 
 class ValidityCheckResponse(BaseModel):
-    valid_patents: List[Dict[str, Any]] = Field(..., description="有效的专利文档")
-    valid_papers: List[Dict[str, Any]] = Field(..., description="有效的论文文档")
-    total_valid: int = Field(..., description="有效文档总数")
-    time_range: str = Field(..., description="时间范围")
-    date_comparisons: List[Dict[str, Any]] = Field(..., description="日期比较结果")
-    comparison_stats: Dict[str, Dict[str, int]] = Field(..., description="统计信息")
-    formatted_patent_results: List[str] = Field(..., description="专利的格式化结果")
-    formatted_paper_results: List[str] = Field(..., description="论文的格式化结果")
+    valid_patents: List[Dict[str, Any]] = Field(default_factory=list, description="有效的专利文档")
+    valid_papers: List[Dict[str, Any]] = Field(default_factory=list, description="有效的论文文档")
+    valid_standards: List[Dict[str, Any]] = Field(default_factory=list, description="有效的标准文档")
+    total_valid: int = Field(0, description="有效文档总数")
+    time_range: str = Field("", description="时间范围")
+    date_comparisons: List[Dict[str, Any]] = Field(default_factory=list, description="日期比较结果")
+    comparison_stats: Dict[str, Dict[str, int]] = Field(default_factory=dict, description="统计信息")
+    formatted_patent_results: List[str] = Field(default_factory=list, description="专利的格式化结果")
+    formatted_paper_results: List[str] = Field(default_factory=list, description="论文的格式化结果")
+    formatted_standard_results: List[str] = Field(default_factory=list, description="标准的格式化结果")
 
 
 class ProcessResponse(BaseModel):
@@ -253,6 +255,24 @@ async def process_files(files: List[UploadFile] = File(...)):
                         收稿日期: {info.get('received_date', 'N/A')}
                         接受日期: {info.get('accepted_date', 'N/A')}
                         出版日期: {info.get('published_date', 'N/A')}
+                        项目编号: {info.get('project_number', 'N/A')} 
+                        单位: {info.get('institution', 'N/A')}    
+                        {'=' * 40}"""
+
+            elif doc_type == "标准":
+                # 提取标准信息
+                info = await extract_info(text, "标准")
+                info.update({"文件名": file.filename, "类型": "标准"})
+                structured_data[file_id] = info
+                result = f"""文件: {file.filename}
+                        类型: 标准
+                        标准名称: {info.get('标准名称', 'N/A')}
+                        标准编号: {info.get('标准编号', 'N/A')}
+                        起草单位: {info.get('起草单位', 'N/A')}
+                        起草人: {info.get('起草人', 'N/A')}
+                        发布单位: {info.get('发布单位', 'N/A')}
+                        发布时间: {info.get('发布时间', 'N/A')}
+                        实施时间: {info.get('实施时间', 'N/A')}
                         {'=' * 40}"""
             else:
                 # 类型未识别，调用 pdf_pic_reader 提取文本
@@ -289,7 +309,25 @@ async def process_files(files: List[UploadFile] = File(...)):
                                             收稿日期: {info.get('received_date', 'N/A')}
                                             接受日期: {info.get('accepted_date', 'N/A')}
                                             出版日期: {info.get('published_date', 'N/A')}
+                                            项目编号: {info.get('project_number', 'N/A')} 
+                                            单位: {info.get('institution', 'N/A')} 
                                             {'=' * 40}"""
+
+                elif doc_type == "标准":
+                    # 提取标准信息
+                    info = await extract_info(text, "标准")
+                    info.update({"文件名": file.filename, "类型": "标准"})
+                    structured_data[file_id] = info
+                    result = f"""文件: {file.filename}
+                            类型: 标准
+                            标准名称: {info.get('标准名称', 'N/A')}
+                            标准编号: {info.get('标准编号', 'N/A')}
+                            起草单位: {info.get('起草单位', 'N/A')}
+                            起草人: {info.get('起草人', 'N/A')}
+                            发布单位: {info.get('发布单位', 'N/A')}
+                            发布时间: {info.get('发布时间', 'N/A')}
+                            实施时间: {info.get('实施时间', 'N/A')}
+                            {'=' * 40}"""
                 else:
                     # 如果仍未识别，则标记为未识别
                     result = f"文件: {file.filename}\n类型: 未识别\n{'=' * 40}"
@@ -318,12 +356,15 @@ async def check_documents_validity(request: ValidityCheckRequest):
     # 初始化结果存储
     valid_patents = []  # 存储有效的专利文档
     valid_papers = []  # 存储有效的论文文档
+    valid_standards = [] # 存储有效的标准文档
     formatted_patent_results = []  # 存储专利的格式化结果
     formatted_paper_results = []  # 存储论文的格式化结果
+    formatted_standard_results = []  # 存储标准的格式化结果
     date_comparisons = []  # 存储日期比较结果
     stats = {
         "patent": {"total": 0, "in_range": 0},
-        "paper": {"total": 0, "in_range": 0}
+        "paper": {"total": 0, "in_range": 0},
+        "standard": {"total": 0, "in_range": 0}
     }
 
     # 处理专利数据
@@ -387,19 +428,53 @@ async def check_documents_validity(request: ValidityCheckRequest):
                                 收稿日期: {paper_doc.get('received_date', 'N/A')}
                                 接受日期: {paper_doc.get('accepted_date', 'N/A')}
                                 出版日期: {paper_doc.get('published_date', 'N/A')}
+                                项目编号: {paper_doc.get('project_number', 'N/A')}  # 新增行
+                                单位: {paper_doc.get('institution', 'N/A')}  # 新增行
                                 文件名: {paper_doc.get('文件名', 'N/A')}
                                 {'=' * 40}"""
                 formatted_paper_results.append(formatted)
 
+    for standard_id, standard_doc in request.docs.get("standardData", {}).items():
+        date_field = "发布时间"
+        date_str = standard_doc.get(date_field, "")
+        doc_date = parse_date(date_str) if date_str and date_str not in (None, 'N/A', '') else None
+
+        stats["standard"]["total"] += 1
+
+        if doc_date:
+            in_range = start_dt <= doc_date <= end_dt
+            date_comparisons.append({
+                "filename": standard_doc.get("文件名", ""),
+                "doc_type": "标准",
+                "date_field": date_field,
+                "date_value": date_str,
+                "in_range": in_range
+            })
+
+            if in_range:
+                valid_standards.append(standard_doc)
+                stats["standard"]["in_range"] += 1
+                formatted = f"""类型: 标准
+                                标准名称: {standard_doc.get('标准名称', 'N/A')}
+                                标准编号: {standard_doc.get('标准编号', 'N/A')}
+                                发布单位: {standard_doc.get('发布单位', 'N/A')}
+                                发布时间: {standard_doc.get('发布时间', 'N/A')}
+                                实施时间: {standard_doc.get('实施时间', 'N/A')}
+                                文件名: {standard_doc.get('文件名', 'N/A')}
+                                {'=' * 40}"""
+                formatted_standard_results.append(formatted)
+
     return ValidityCheckResponse(
         valid_patents=valid_patents,
         valid_papers=valid_papers,
-        total_valid=len(valid_patents) + len(valid_papers),
+        valid_standards=valid_standards,  # 确保包含此字段
+        total_valid=len(valid_patents) + len(valid_papers) + len(valid_standards),  # 更新总数计算
         time_range=f"{request.start_date} 至 {request.end_date}",
         date_comparisons=date_comparisons,
         comparison_stats=stats,
         formatted_patent_results=formatted_patent_results,
-        formatted_paper_results=formatted_paper_results
+        formatted_paper_results=formatted_paper_results,
+        formatted_standard_results=formatted_standard_results
     )
 
 
