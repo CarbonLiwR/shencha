@@ -9,7 +9,7 @@ async def extract_info(text: str, doc_type: str) -> Dict[str, Any]:
     if doc_type == '专利':
         prompt = f"""
         从以下专利文本中提取信息：
-        {text[:5000]}
+        {text[:8000]}
 
         请提取：
         1. 专利号
@@ -23,7 +23,7 @@ async def extract_info(text: str, doc_type: str) -> Dict[str, Any]:
     elif doc_type == '论文':
         prompt = f"""
         请从以下论文文本中精确提取信息：
-        {text[:5000]}
+        {text[:8000]}
 
         要求返回严格JSON格式，包含以下字段：
         1. 标题（必须提取）
@@ -59,7 +59,7 @@ async def extract_info(text: str, doc_type: str) -> Dict[str, Any]:
     elif doc_type == '标准':
         prompt = f"""
         请从以下标准文本中精确提取信息：
-        {text[:5000]}
+        {text[:8000]}
 
         要求返回严格JSON格式，包含以下字段：
         1. 标准名称（完整名称）
