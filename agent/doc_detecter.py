@@ -5,7 +5,7 @@ from llm.send_request import send_async_request
 
 async def detect_doc_type(text: str) -> str:
     prompt = f"""
-    分析以下文本，判断是专利、论文还是其他：
+    分析以下文本，判断是专利、论文、论文还是其他：
     {text[:1000]}
 
     返回：专利、论文、标准、其他,你只能返回专利、论文、标准、其他
