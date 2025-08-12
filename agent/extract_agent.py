@@ -5,25 +5,33 @@ from llm.get_llm_key import get_llm_key
 from llm.send_request import send_async_request
 
 
-async def extract_info(text: str, doc_type: str) -> Dict[str, Any]:
+
+
+
+
+async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any]:
+    first = text[:12000] # 限制前12000个字符
+    last = text[-12000:] # 限制后12000个字符
+    print(f"提取信息，文档类型: {doc_type}, 文件名: {filename}")
     if doc_type == '专利':
         prompt = f"""
-        从以下专利文本中提取信息：
-        {text[:8000]}
+        从以下专利文件{filename}文本中提取信息：
+        {first}
 
         请提取：
         1. 专利号
-        2. 申请日期（YYYY-MM-DD）
-        3. 授权日期（如无则写N/A）
-        4. 发明人（逗号分隔）
-        5. 受让人（公司/机构）
+        2. 专利名称
+        3. 申请日期（YYYY-MM-DD）
+        4. 授权日期（如无则写N/A）
+        5. 发明人（逗号分隔）
+        6. 受让人（公司/机构）
 
         返回 JSON 格式。
         """
     elif doc_type == '论文':
         prompt = f"""
-        请从以下论文文本中精确提取信息：
-        {text[:8000]}
+        请从以下论文文件{filename}文本中精确提取信息：
+        {first,last}
 
         要求返回严格JSON格式，包含以下字段：
         1. 标题（必须提取）
@@ -41,6 +49,7 @@ async def extract_info(text: str, doc_type: str) -> Dict[str, Any]:
         - 日期格式示例：Received:4December2023 → received_date: "2023-12-04"
         - 必须包含所有8个字段，没有的字段写N/A
         - 年份优先从出版日期提取，其次接受日期，最后收稿日期
+        - 如果可行的话，项目编号需要与对应的资助机构一起提供
 
         示例格式：
         {{
@@ -58,11 +67,12 @@ async def extract_info(text: str, doc_type: str) -> Dict[str, Any]:
         """
     elif doc_type == '标准':
         prompt = f"""
-        请从以下标准文本中精确提取信息：
-        {text[:8000]}
+        请从以下标准文件{filename}文本中精确提取信息：
+        {first}
 
         要求返回严格JSON格式，包含以下字段：
         1. 标准名称（完整名称）
+        2. 标准形式（如 国标 地标 团标）
         2. 标准编号（如GB/T 12345-2020）
         3. 起草单位（分号分隔）
         4. 起草人（分号分隔）
