@@ -232,17 +232,21 @@ async def process_files(files: List[UploadFile] = File(...)):
             # 后续处理保持不变...
             text = await pdf_text_reader(temp_file_path)
             doc_type = await detect_doc_type(text)
+            print(f"检测到的文档类型111: {doc_type}")
+            print("111", text[:12000])
+            print("111", text[-12000:])
 
             if doc_type == "专利":
                 # 提取专利信息
-                info = await extract_info(text, "专利")
+
+                info = await extract_info(text, "专利", file.filename)
                 info.update({"文件名": file.filename, "类型": "专利"})
                 structured_data[file_id] = info
-                result = f"文件: {file.filename}\n类型: 专利\n专利号: {info.get('专利号')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
+                result = f"文件: {file.filename}\n类型: 专利\n专利名称: {info.get('专利名称')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
 
             elif doc_type == "论文":
                 # 提取论文信息
-                info = await extract_info(text, "论文")
+                info = await extract_info(text, "论文", file.filename)
                 info.update({"文件名": file.filename, "类型": "论文"})
                 structured_data[file_id] = info
                 result = f"""文件: {file.filename}
@@ -261,12 +265,13 @@ async def process_files(files: List[UploadFile] = File(...)):
 
             elif doc_type == "标准":
                 # 提取标准信息
-                info = await extract_info(text, "标准")
+                info = await extract_info(text, "标准", file.filename)
                 info.update({"文件名": file.filename, "类型": "标准"})
                 structured_data[file_id] = info
                 result = f"""文件: {file.filename}
                         类型: 标准
                         标准名称: {info.get('标准名称', 'N/A')}
+                        标准形式: {info.get('标准形式', 'N/A')}
                         标准编号: {info.get('标准编号', 'N/A')}
                         起草单位: {info.get('起草单位', 'N/A')}
                         起草人: {info.get('起草人', 'N/A')}
@@ -289,14 +294,14 @@ async def process_files(files: List[UploadFile] = File(...)):
 
                 if doc_type == "专利":
                     # 提取专利信息
-                    info = await extract_info(text, "专利")
+                    info = await extract_info(text, "专利", file.filename)
                     info.update({"文件名": file.filename, "类型": "专利"})
                     structured_data[file_id] = info
-                    result = f"文件: {file.filename}\n类型: 专利\n专利号: {info.get('专利号')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
+                    result = f"文件: {file.filename}\n类型: 专利\n专利名称: {info.get('专利名称')}\n专利名称: {info.get('专利名称')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
 
                 elif doc_type == "论文":
                     # 提取论文信息
-                    info = await extract_info(text, "论文")
+                    info = await extract_info(text, "论文", file.filename)
                     info.update({"文件名": file.filename, "类型": "论文"})
                     structured_data[file_id] = info
                     result = f"""文件: {file.filename}
@@ -315,12 +320,13 @@ async def process_files(files: List[UploadFile] = File(...)):
 
                 elif doc_type == "标准":
                     # 提取标准信息
-                    info = await extract_info(text, "标准")
+                    info = await extract_info(text, "标准", file.filename)
                     info.update({"文件名": file.filename, "类型": "标准"})
                     structured_data[file_id] = info
                     result = f"""文件: {file.filename}
                             类型: 标准
                             标准名称: {info.get('标准名称', 'N/A')}
+                            标准形式: {info.get('标准形式', 'N/A')}
                             标准编号: {info.get('标准编号', 'N/A')}
                             起草单位: {info.get('起草单位', 'N/A')}
                             起草人: {info.get('起草人', 'N/A')}
@@ -389,7 +395,7 @@ async def check_documents_validity(request: ValidityCheckRequest):
                 valid_patents.append(patent_doc)  # 添加到有效专利列表
                 stats["patent"]["in_range"] += 1
                 formatted = f"""类型: 专利
-                                专利号: {patent_doc.get('专利号', 'N/A')}
+                                专利名称: {patent_doc.get('专利名称', 'N/A')}
                                 申请日期: {patent_doc.get('申请日期', 'N/A')}
                                 授权日期: {patent_doc.get('授权日期', 'N/A')}
                                 发明人: {patent_doc.get('发明人', 'N/A')}
@@ -456,6 +462,7 @@ async def check_documents_validity(request: ValidityCheckRequest):
                 stats["standard"]["in_range"] += 1
                 formatted = f"""类型: 标准
                                 标准名称: {standard_doc.get('标准名称', 'N/A')}
+                                标准形式: {standard_doc.get('标准形式', 'N/A')}
                                 标准编号: {standard_doc.get('标准编号', 'N/A')}
                                 发布单位: {standard_doc.get('发布单位', 'N/A')}
                                 发布时间: {standard_doc.get('发布时间', 'N/A')}
@@ -482,4 +489,4 @@ async def check_documents_validity(request: ValidityCheckRequest):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
