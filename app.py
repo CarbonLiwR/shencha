@@ -39,6 +39,7 @@ class ValidityCheckResponse(BaseModel):
     valid_patents: List[Dict[str, Any]] = Field(default_factory=list, description="有效的专利文档")
     valid_papers: List[Dict[str, Any]] = Field(default_factory=list, description="有效的论文文档")
     valid_standards: List[Dict[str, Any]] = Field(default_factory=list, description="有效的标准文档")
+    valid_copyrights: List[Dict[str, Any]] = Field(default_factory=list, description="有效的软件著作权文档")
     total_valid: int = Field(0, description="有效文档总数")
     time_range: str = Field("", description="时间范围")
     date_comparisons: List[Dict[str, Any]] = Field(default_factory=list, description="日期比较结果")
@@ -46,7 +47,7 @@ class ValidityCheckResponse(BaseModel):
     formatted_patent_results: List[str] = Field(default_factory=list, description="专利的格式化结果")
     formatted_paper_results: List[str] = Field(default_factory=list, description="论文的格式化结果")
     formatted_standard_results: List[str] = Field(default_factory=list, description="标准的格式化结果")
-
+    formatted_copyright_results: List[str] = Field(default_factory=list, description="软著的格式化结果")
 
 class ProcessResponse(BaseModel):
     results: Dict[str, str]  # 每个文件的结果以 id 为键
@@ -149,6 +150,29 @@ def check_validity(item: dict, start_date: str, end_date: str) -> bool:
             except (ValueError, TypeError):
                 return False
 
+        # 标准处理逻辑
+        elif doc_type == '标准':
+            # 优先使用发布时间，若无则使用实施时间
+            date_str = item.get('发布时间')
+            if date_str in (None, 'N/A', ''):
+                date_str = item.get('实施时间', 'N/A')
+
+            # 如果仍然没有有效日期，则跳过
+            if date_str == 'N/A':
+                return False
+
+            doc_date = parse_date(date_str)
+            return bool(doc_date and start_dt <= doc_date <= end_dt)
+
+        # 软著处理逻辑
+        elif doc_type == '软著':
+            date_str = item.get('授权时间')
+            if date_str in (None, 'N/A', ''):
+                return False
+
+            doc_date = parse_date(date_str)
+            return bool(doc_date and start_dt <= doc_date <= end_dt)
+
         # 其他类型文档
         return False
 
@@ -242,7 +266,7 @@ async def process_files(files: List[UploadFile] = File(...)):
                 info = await extract_info(text, "专利", file.filename)
                 info.update({"文件名": file.filename, "类型": "专利"})
                 structured_data[file_id] = info
-                result = f"文件: {file.filename}\n类型: 专利\n专利名称: {info.get('专利名称')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
+                result = f"文件: {file.filename}\n类型: 专利\n专利号：{info.get('专利号')}\n专利名称: {info.get('专利名称')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
 
             elif doc_type == "论文":
                 # 提取论文信息
@@ -279,6 +303,20 @@ async def process_files(files: List[UploadFile] = File(...)):
                         发布时间: {info.get('发布时间', 'N/A')}
                         实施时间: {info.get('实施时间', 'N/A')}
                         {'=' * 40}"""
+
+            elif doc_type == "软著":
+                # 提取软著信息
+                info = await extract_info(text, "软著", file.filename)
+                info.update({"文件名": file.filename, "类型": "软著"})
+                structured_data[file_id] = info
+                result = f"""文件: {file.filename}
+                        类型: 软著
+                        证书号: {info.get('证书号', 'N/A')}
+                        软件名称: {info.get('软件名称', 'N/A')}
+                        著作权人: {info.get('著作权人', 'N/A')}
+                        登记号: {info.get('登记号', 'N/A')}
+                        授权时间: {info.get('授权时间', 'N/A')}
+                        {'=' * 40}"""
             else:
                 # 类型未识别，调用 pdf_pic_reader 提取文本
                 print(f"未识别的文档类型，尝试通过图片提取文本: {file.filename}")
@@ -287,7 +325,7 @@ async def process_files(files: List[UploadFile] = File(...)):
                 except Exception as e:
                     print(f"PDF 转图片失败: {e}")
                     text = None
-
+                print(f"重新检测的文本内容: {text[:12000] if text else '无文本'}")
                 # 重新检测文档类型
                 doc_type = await detect_doc_type(text) if text else "其他"
                 print("重新检测的 doc_type", doc_type)
@@ -297,7 +335,7 @@ async def process_files(files: List[UploadFile] = File(...)):
                     info = await extract_info(text, "专利", file.filename)
                     info.update({"文件名": file.filename, "类型": "专利"})
                     structured_data[file_id] = info
-                    result = f"文件: {file.filename}\n类型: 专利\n专利名称: {info.get('专利名称')}\n专利名称: {info.get('专利名称')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
+                    result = f"文件: {file.filename}\n类型: 专利\n专利号: {info.get('专利号')}\n专利名称: {info.get('专利名称')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
 
                 elif doc_type == "论文":
                     # 提取论文信息
@@ -334,11 +372,26 @@ async def process_files(files: List[UploadFile] = File(...)):
                             发布时间: {info.get('发布时间', 'N/A')}
                             实施时间: {info.get('实施时间', 'N/A')}
                             {'=' * 40}"""
+
+                elif doc_type == "软著":
+                    # 提取标准信息
+                    info = await extract_info(text, "软著", file.filename)
+                    info.update({"文件名": file.filename, "类型": "软著"})
+                    structured_data[file_id] = info
+                    result = f"""文件: {file.filename}
+                            类型: 软著
+                            证书号: {info.get('证书号', 'N/A')}
+                            软件名称: {info.get('软件名称', 'N/A')}
+                            著作权人: {info.get('著作权人', 'N/A')}
+                            登记号: {info.get('登记号', 'N/A')}
+                            授权时间: {info.get('授权时间', 'N/A')}
+                            {'=' * 40}"""
+
                 else:
                     # 如果仍未识别，则标记为未识别
                     result = f"文件: {file.filename}\n类型: 未识别\n{'=' * 40}"
                     structured_data[file_id] = {"文件名": file.filename, "类型": "未识别"}
-
+            print("result",result)
             # 保存结果
             results[file_id] = result
     finally:
@@ -363,14 +416,17 @@ async def check_documents_validity(request: ValidityCheckRequest):
     valid_patents = []  # 存储有效的专利文档
     valid_papers = []  # 存储有效的论文文档
     valid_standards = [] # 存储有效的标准文档
+    valid_copyrights = []  # 存储有效的软著文档
     formatted_patent_results = []  # 存储专利的格式化结果
     formatted_paper_results = []  # 存储论文的格式化结果
     formatted_standard_results = []  # 存储标准的格式化结果
+    formatted_copyright_results = []  # 存储软著的格式化结果
     date_comparisons = []  # 存储日期比较结果
     stats = {
         "patent": {"total": 0, "in_range": 0},
         "paper": {"total": 0, "in_range": 0},
-        "standard": {"total": 0, "in_range": 0}
+        "standard": {"total": 0, "in_range": 0},
+        "copyright": {"total": 0, "in_range": 0}
     }
 
     # 处理专利数据
@@ -471,17 +527,52 @@ async def check_documents_validity(request: ValidityCheckRequest):
                                 {'=' * 40}"""
                 formatted_standard_results.append(formatted)
 
+    # 处理软著数据
+    for copyright_id, copyright_doc in request.docs.get("copyrightData", {}).items():
+        date_field = "授权时间"
+        date_str = copyright_doc.get(date_field, "")
+        doc_date = parse_date(date_str) if date_str and date_str not in (None, 'N/A', '') else None
+
+        stats["copyright"] = stats.get("copyright", {"total": 0, "in_range": 0})
+        stats["copyright"]["total"] += 1
+
+        if doc_date:
+            in_range = start_dt <= doc_date <= end_dt
+            date_comparisons.append({
+                "filename": copyright_doc.get("文件名", ""),
+                "doc_type": "软著",
+                "date_field": date_field,
+                "date_value": date_str,
+                "in_range": in_range
+            })
+
+            if in_range:
+                valid_copyrights.append(copyright_doc)
+                stats["copyright"]["in_range"] += 1
+                formatted = f"""类型: 软著
+                                证书号: {copyright_doc.get('证书号', 'N/A')}
+                                软件名称: {copyright_doc.get('软件名称', 'N/A')}
+                                著作权人: {copyright_doc.get('著作权人', 'N/A')}
+                                登记号: {copyright_doc.get('登记号', 'N/A')}
+                                授权时间: {copyright_doc.get('授权时间', 'N/A')}
+                                文件名: {copyright_doc.get('文件名', 'N/A')}
+                                {'=' * 40}"""
+                formatted_copyright_results.append(formatted)
+
     return ValidityCheckResponse(
         valid_patents=valid_patents,
         valid_papers=valid_papers,
         valid_standards=valid_standards,  # 确保包含此字段
-        total_valid=len(valid_patents) + len(valid_papers) + len(valid_standards),  # 更新总数计算
+        valid_copyrights=valid_copyrights,
+        total_valid=len(valid_patents) + len(valid_papers) + len(valid_standards)+ len(valid_copyrights),  # 更新总数计算
         time_range=f"{request.start_date} 至 {request.end_date}",
         date_comparisons=date_comparisons,
         comparison_stats=stats,
         formatted_patent_results=formatted_patent_results,
         formatted_paper_results=formatted_paper_results,
-        formatted_standard_results=formatted_standard_results
+        formatted_standard_results=formatted_standard_results,
+        formatted_copyright_results=formatted_copyright_results  # 添加软著格式化结果
+
     )
 
 
@@ -489,4 +580,4 @@ async def check_documents_validity(request: ValidityCheckRequest):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)
