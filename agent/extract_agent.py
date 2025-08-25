@@ -1,7 +1,8 @@
 import json
 from typing import Dict, Any
-
-from llm.get_llm_key import get_llm_key
+import os
+import sys
+from config.llm_config import llm_config
 from llm.send_request import send_async_request
 
 
@@ -127,19 +128,19 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
     else:
         raise ValueError(f"未知的文档类型: {doc_type}")
     role = "你是一个信息提取专家"
-    api_key = get_llm_key()
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}"
+        "Authorization": f"Bearer {llm_config.api_key}"
     }
-    url = "https://api.rcouyi.com/v1/chat/completions"
     data = {
-        'model': "gpt-4o",
+        'model': llm_config.model_name,
         'messages': [
             {"role": "system", "content": role},
             {"role": "user", "content": prompt}
         ],
     }
+
+    url=llm_config.api_url
     response = await send_async_request(url, headers, data)
     content = response['choices'][0]['message']['content']
     if content.startswith("```json"):
