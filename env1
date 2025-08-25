@@ -1,0 +1,3 @@
+LLM_API_URL=https://api.rcouyi.com/v1/chat/completions
+LLM_MODEL_NAME=gpt-4o
+LLM_API_KEY=sk-pAauG9ss64pQW9FVA703F1453b334eFb95B7447b9083BaBd
