@@ -70,7 +70,7 @@ async def extract_text_from_images(image_paths: list) -> str:
         }
         url = "https://api.rcouyi.com/v1/chat/completions"
         data = {
-            'model': "gpt-4.1",
+            'model': "gemini-2.5-pro-preview-05-06",
             'messages': [
                 {
                     "role": "user",
