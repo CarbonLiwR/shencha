@@ -68,9 +68,10 @@ async def extract_text_from_images(image_paths: list) -> str:
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}"
         }
-        url = "https://api.rcouyi.com/v1/chat/completions"
+        model_name = os.getenv("LLM_MODEL")
+        api_url = os.getenv("LLM_API_URL")
         data = {
-            'model': "gemini-2.5-pro-preview-05-06",
+            'model': model_name,
             'messages': [
                 {
                     "role": "user",
@@ -89,7 +90,7 @@ async def extract_text_from_images(image_paths: list) -> str:
             ],
         }
         try:
-            response = await send_async_request(url, headers, data)
+            response = await send_async_request(api_url, headers, data)
 
             page_text = response['choices'][0]['message']['content']
             # print(f"提取文本内容: {page_text}")
