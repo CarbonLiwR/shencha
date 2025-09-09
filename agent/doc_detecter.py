@@ -13,8 +13,12 @@ async def detect_doc_type(text: str) -> str:
     """
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {llm_config.api_key}"
     }
+    if llm_config.api_key and llm_config.api_key.strip():
+        headers["Authorization"] = f"Bearer {llm_config.api_key}"
+    else:
+        print("API 密钥为空，将不使用 Authorization 头部。")
+    
     data = {
         'model': llm_config.model_name,
         'messages': [
