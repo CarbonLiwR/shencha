@@ -130,8 +130,11 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
     role = "你是一个信息提取专家"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {llm_config.api_key}"
     }
+    if llm_config.api_key and llm_config.api_key.strip():
+        headers["Authorization"] = f"Bearer {llm_config.api_key}"
+    else:
+        print("API 密钥为空，将不使用 Authorization 头部。")
     data = {
         'model': llm_config.model_name,
         'messages': [
