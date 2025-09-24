@@ -1,12 +1,9 @@
-import json
+import json,re
 from typing import Dict, Any
 import os
 import sys
 from config.llm_config import llm_config
 from llm.send_request import send_async_request
-
-
-
 
 
 
@@ -19,7 +16,7 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
         从以下专利文件{filename}文本中提取信息：
         {first}
 
-        请提取：
+        要求返回严格JSON格式，请提取以下字段：
         1. 专利号
         2. 专利名称
         3. 申请日期（YYYY-MM-DD）
@@ -127,6 +124,7 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
 
     else:
         raise ValueError(f"未知的文档类型: {doc_type}")
+
     role = "你是一个信息提取专家"
     headers = {
         "Content-Type": "application/json",
@@ -135,6 +133,7 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
         headers["Authorization"] = f"Bearer {llm_config.api_key}"
     else:
         print("API 密钥为空，将不使用 Authorization 头部。")
+
     data = {
         'model': llm_config.model_name,
         'messages': [
@@ -145,11 +144,22 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
 
     url=llm_config.api_url
     response = await send_async_request(url, headers, data)
+    
     content = response['choices'][0]['message']['content']
-    if content.startswith("```json"):
-        content = content.strip("```json").strip("```")
-    result = json.loads(content)
-    # print("提取结果:", result)
+    print("原始 content:", content)
+    
+    match = re.search(r"\{.*\}", content, re.DOTALL)
+    if not match:
+        raise ValueError(f"未找到 JSON 内容: {content}")
+
+    json_str = match.group(0)
+
+    try:
+        result = json.loads(json_str)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"JSON 解析失败: {e}\n原始 JSON: {json_str}")
+
+    print("最终 result:", result)
 
     # 确保所有字段存在
     if doc_type == '论文':
