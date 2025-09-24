@@ -124,7 +124,7 @@ def check_validity(item: dict, start_date: str, end_date: str) -> bool:
         doc_type = item.get('类型')
 
         # 专利处理逻辑
-        if doc_type == '专利':
+        if "专利" in doc_type:
             # 优先使用授权日期，若无则使用申请日期
             date_str = item.get('授权日期')
             if date_str in (None, 'N/A', ''):
@@ -138,7 +138,7 @@ def check_validity(item: dict, start_date: str, end_date: str) -> bool:
             return bool(doc_date and start_dt <= doc_date <= end_dt)
 
         # 论文处理逻辑
-        elif doc_type == '论文':
+        elif '论文' in doc_type :
             year = item.get('年份')
             if not year or year == 'N/A':
                 return False
@@ -151,7 +151,7 @@ def check_validity(item: dict, start_date: str, end_date: str) -> bool:
                 return False
 
         # 标准处理逻辑
-        elif doc_type == '标准':
+        elif '标准' in doc_type:
             # 优先使用发布时间，若无则使用实施时间
             date_str = item.get('发布时间')
             if date_str in (None, 'N/A', ''):
@@ -165,7 +165,7 @@ def check_validity(item: dict, start_date: str, end_date: str) -> bool:
             return bool(doc_date and start_dt <= doc_date <= end_dt)
 
         # 软著处理逻辑
-        elif doc_type == '软著':
+        elif '软著' in doc_type:
             date_str = item.get('授权时间')
             if date_str in (None, 'N/A', ''):
                 return False
@@ -257,12 +257,14 @@ async def process_files(files: List[UploadFile] = File(...)):
             text = await pdf_text_reader(temp_file_path)
             raw_doc_type = await detect_doc_type(text)
             # 处理doc_type，只保留</think>后的内容
+            print("大模型",raw_doc_type)
             doc_type = raw_doc_type.split("</think>")[-1].strip()
             print(f"检测到的文档类型111: {doc_type}")
             print("111", text[:12000])
             print("111", text[-12000:])
+            
 
-            if doc_type in "专利":
+            if "专利" in doc_type:
                 # 提取专利信息
 
                 info = await extract_info(text, "专利", file.filename)
@@ -270,7 +272,7 @@ async def process_files(files: List[UploadFile] = File(...)):
                 structured_data[file_id] = info
                 result = f"文件: {file.filename}\n类型: 专利\n专利号：{info.get('专利号')}\n专利名称: {info.get('专利名称')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
 
-            elif doc_type in "论文":
+            elif "论文" in doc_type:
                 # 提取论文信息
                 info = await extract_info(text, "论文", file.filename)
                 info.update({"文件名": file.filename, "类型": "论文"})
@@ -289,7 +291,7 @@ async def process_files(files: List[UploadFile] = File(...)):
                         单位: {info.get('institution', 'N/A')}    
                         {'=' * 40}"""
 
-            elif doc_type in "标准":
+            elif "标准" in doc_type:
                 # 提取标准信息
                 info = await extract_info(text, "标准", file.filename)
                 info.update({"文件名": file.filename, "类型": "标准"})
@@ -306,7 +308,7 @@ async def process_files(files: List[UploadFile] = File(...)):
                         实施时间: {info.get('实施时间', 'N/A')}
                         {'=' * 40}"""
 
-            elif doc_type in "软著":
+            elif "软著" in doc_type:
                 # 提取软著信息
                 info = await extract_info(text, "软著", file.filename)
                 info.update({"文件名": file.filename, "类型": "软著"})
@@ -335,14 +337,14 @@ async def process_files(files: List[UploadFile] = File(...)):
 
                 print("重新检测的 doc_type", doc_type)
 
-                if doc_type in "专利":
+                if "专利" in doc_type:
                     # 提取专利信息
                     info = await extract_info(text, "专利", file.filename)
                     info.update({"文件名": file.filename, "类型": "专利"})
                     structured_data[file_id] = info
                     result = f"文件: {file.filename}\n类型: 专利\n专利号: {info.get('专利号')}\n专利名称: {info.get('专利名称')}\n申请日期: {info.get('申请日期')}\n授权日期: {info.get('授权日期')}\n发明人: {info.get('发明人')}\n受让人: {info.get('受让人')}\n{'=' * 40}"
 
-                elif doc_type in "论文":
+                elif "论文" in doc_type:
                     # 提取论文信息
                     info = await extract_info(text, "论文", file.filename)
                     info.update({"文件名": file.filename, "类型": "论文"})
@@ -361,7 +363,7 @@ async def process_files(files: List[UploadFile] = File(...)):
                                             单位: {info.get('institution', 'N/A')} 
                                             {'=' * 40}"""
 
-                elif doc_type in "标准":
+                elif "标准" in doc_type:
                     # 提取标准信息
                     info = await extract_info(text, "标准", file.filename)
                     info.update({"文件名": file.filename, "类型": "标准"})
@@ -378,7 +380,7 @@ async def process_files(files: List[UploadFile] = File(...)):
                             实施时间: {info.get('实施时间', 'N/A')}
                             {'=' * 40}"""
 
-                elif doc_type in "软著":
+                elif "软著" in doc_type :
                     # 提取标准信息
                     info = await extract_info(text, "软著", file.filename)
                     info.update({"文件名": file.filename, "类型": "软著"})
