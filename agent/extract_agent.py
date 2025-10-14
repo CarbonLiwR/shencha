@@ -141,7 +141,7 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
                 "content": [
                     {
                         "type": "text",
-                        "text": "你是一个信息提取专家"+prompt
+                        "text": "你是一个信息提取专家"+prompt+"你返回的JSON格式的字段必须严格按照要求，必须为中文字段名"
                     }
 
                 ]
