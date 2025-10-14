@@ -1,10 +1,14 @@
-import json,re
+import json,re,os
 from typing import Dict, Any
-import os
-import sys
-from config.llm_config import llm_config
-from llm.send_request import send_async_request
-
+from dotenv import load_dotenv
+import requests
+# 加载环境变量
+load_dotenv()
+# 获取配置
+API_BASE_URL = os.getenv('API_BASE_URL')
+API_KEY = os.getenv('API_KEY')
+TEXT_MODEL = os.getenv('TEXT_MODEL')
+VISION_MODEL = os.getenv('VISION_MODEL')
 
 
 async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any]:
@@ -125,40 +129,46 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
     else:
         raise ValueError(f"未知的文档类型: {doc_type}")
 
-    role = "你是一个信息提取专家"
+    import requests
+
+    url = API_BASE_URL
+
+    payload = {
+        "model": TEXT_MODEL,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "你是一个信息提取专家"+prompt
+                    }
+
+                ]
+            },
+
+        ]
+    }
     headers = {
-        "Content-Type": "application/json",
-    }
-    if llm_config.api_key and llm_config.api_key.strip():
-        headers["Authorization"] = f"Bearer {llm_config.api_key}"
-    else:
-        print("API 密钥为空，将不使用 Authorization 头部。")
-
-    data = {
-        'model': llm_config.model_name,
-        'messages': [
-            {"role": "system", "content": role},
-            {"role": "user", "content": prompt}
-        ],
+        "Authorization":  f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
     }
 
-    url=llm_config.api_url
-    response = await send_async_request(url, headers, data)
-    
-    content = response['choices'][0]['message']['content']
-    print("原始 content:", content)
-    
-    match = re.search(r"\{.*\}", content, re.DOTALL)
-    if not match:
-        raise ValueError(f"未找到 JSON 内容: {content}")
-
-    json_str = match.group(0)
+    response = requests.post(url, json=payload, headers=headers)
+    response_data = response.json()
+    content=response_data['choices'][0]['message']['content']
+    print("response", response_data['choices'][0]['message']['content'])
+    # return response_data['choices'][0]['message']['content'].strip()
+    #
 
     try:
-        result = json.loads(json_str)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"JSON 解析失败: {e}\n原始 JSON: {json_str}")
-
+        result = json.loads(content)  # 尝试直接解析JSON
+    except json.JSONDecodeError:
+        # 方法2：如果失败，尝试提取JSON部分
+        match = re.search(r"\{.*\}", content, re.DOTALL)  # 对content字符串操作
+        if not match:
+            raise ValueError(f"未找到JSON内容: {content}")
+        result = json.loads(match.group(0))
     print("最终 result:", result)
 
     # 确保所有字段存在
