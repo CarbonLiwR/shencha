@@ -1,7 +1,7 @@
 import json,re,os
 from typing import Dict, Any
 from dotenv import load_dotenv
-import requests
+
 # 加载环境变量
 load_dotenv()
 # 获取配置
@@ -10,11 +10,12 @@ API_KEY = os.getenv('API_KEY')
 TEXT_MODEL = os.getenv('TEXT_MODEL')
 VISION_MODEL = os.getenv('VISION_MODEL')
 
+from logging_config import logger
 
 async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any]:
     first = text[:12000] # 限制前12000个字符
     last = text[-12000:] # 限制后12000个字符
-    print(f"提取信息，文档类型: {doc_type}, 文件名: {filename}")
+    logger.info(f"开始提取信息，文档类型: {doc_type}, 文件名: {filename}")
     if doc_type == '专利':
         prompt = f"""
         从以下专利文件{filename}文本中提取信息：
@@ -153,11 +154,11 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
         "Authorization":  f"Bearer {API_KEY}",
         "Content-Type": "application/json"
     }
-
+    logger.info(f"发送请求到大模型API，文档类型: {doc_type}")
     response = requests.post(url, json=payload, headers=headers)
     response_data = response.json()
     content=response_data['choices'][0]['message']['content']
-    print("response", response_data['choices'][0]['message']['content'])
+    logger.debug(f"大模型原始响应内容: {content}...")
     # return response_data['choices'][0]['message']['content'].strip()
     #
 
@@ -169,7 +170,7 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
         if not match:
             raise ValueError(f"未找到JSON内容: {content}")
         result = json.loads(match.group(0))
-    print("最终 result:", result)
+    logger.debug(f"解析后的结果: {result}")
 
     # 确保所有字段存在
     if doc_type == '论文':
