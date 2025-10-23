@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 from agent.doc_detecter import detect_doc_type
 from agent.extract_agent import extract_info
 from agent.pdf_reader import pdf_text_reader, pdf_pic_reader
+from logging_config import logger
 
 load_dotenv()
 app = FastAPI(title="文档信息提取服务", version="2.0.0")
@@ -57,8 +58,8 @@ class ProcessResponse(BaseModel):
 async def download_from_url(url: str, save_path: str) -> bool:
     """下载文件并显示进度信息"""
     try:
-        print(f"⏳ 开始下载: {url}")
-        print(f"📁 保存路径: {save_path}")
+        logger.info(f"开始下载: {url}")
+        logger.info(f"保存路径: {save_path}")
 
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
@@ -67,7 +68,7 @@ async def download_from_url(url: str, save_path: str) -> bool:
                     file_size = int(response.headers.get('content-length', 0))
 
                     # 显示下载基本信息
-                    print(f"📦 文件大小: {file_size / 1024:.2f} KB" if file_size else "📦 文件大小: 未知")
+                    logger.info(f"文件大小: {file_size / 1024:.2f} KB" if file_size else "文件大小: 未知")
 
                     content = b''
                     downloaded = 0
@@ -78,29 +79,30 @@ async def download_from_url(url: str, save_path: str) -> bool:
                         # 显示下载进度（如果有文件大小信息）
                         if file_size > 0:
                             percent = downloaded / file_size * 100
-                            print(f"⬇️ 下载进度: {percent:.1f}% ({downloaded}/{file_size} bytes)", end='\r')
+                            logger.debug(f"下载进度: {percent:.1f}% ({downloaded}/{file_size} bytes)")
 
                     # 保存文件
                     async with aiofiles.open(save_path, "wb") as f:
                         await f.write(content)
 
-                    print(f"\n✅ 下载完成: {url}")
+                    logger.info(f"下载完成: {url}")
                     return True
 
-                print(f"❌ 下载失败: HTTP状态码 {response.status}")
+                logger.error(f"下载失败: HTTP状态码 {response.status}")
                 return False
 
     except aiohttp.ClientError as e:
-        print(f"❌ 网络错误: {str(e)}")
+        logger.error(f"网络错误: {str(e)}", exc_info=True)
     except IOError as e:
-        print(f"❌ 文件保存错误: {str(e)}")
+        logger.error(f"文件保存错误: {str(e)}", exc_info=True)
     except Exception as e:
-        print(f"❌ 未知错误: {str(e)}")
+        logger.error(f"未知错误: {str(e)}", exc_info=True)
 
     return False
 
 
 def parse_date(date_str: str) -> Optional[datetime]:
+
     formats = [
         "%Y-%m-%d", "%Y/%m/%d", "%Y年%m月%d日",
         "%Y.%m.%d", "%d-%m-%Y", "%d/%m/%Y",
@@ -177,12 +179,13 @@ def check_validity(item: dict, start_date: str, end_date: str) -> bool:
         return False
 
     except Exception as e:
-        print(f"时效检查错误: {e}")
+        print(f"时效检查错误: {e}")  # 应该改为 logger.error
         return False
 
 
 @app.post("/api/v1/process_files", response_model=ProcessResponse)
 async def process_files(files: List[UploadFile] = File(...)):
+    logger.info(f"开始处理文件上传请求，文件数量: {len(files)}")
     temp_dir = tempfile.mkdtemp()
     results = {}
     structured_data = {}
@@ -191,6 +194,7 @@ async def process_files(files: List[UploadFile] = File(...)):
         for idx, file in enumerate(files, start=1):
             file_id = f"id{idx}"
             temp_file_path = os.path.join(temp_dir, file.filename)
+            logger.info(f"处理文件 {idx}/{len(files)}: {file.filename}")
             url = None
             is_url = False
 
@@ -218,7 +222,7 @@ async def process_files(files: List[UploadFile] = File(...)):
             # 文件内容获取逻辑
             try:
                 if is_url and url:
-                    print(f"下载URL文件: {url}")
+                    logger.info(f"下载URL文件: {url}")
                     if not await download_from_url(url, temp_file_path):
                         # 修改为返回结构化错误信息
                         raise HTTPException(
@@ -257,12 +261,12 @@ async def process_files(files: List[UploadFile] = File(...)):
             text = await pdf_text_reader(temp_file_path)
             raw_doc_type = await detect_doc_type(text)
             # 处理doc_type，只保留</think>后的内容
-            print("大模型",raw_doc_type)
             doc_type = raw_doc_type.split("</think>")[-1].strip()
-            print(f"检测到的文档类型111: {doc_type}")
-            print("111", text[:12000])
-            print("111", text[-12000:])
-            
+            logger.debug(f"大模型返回: {raw_doc_type}")
+            logger.debug(f"检测到的文档类型: {doc_type}")
+            # logger.debug(f"文本内容前12000字符: {text[:12000]}")
+            # logger.debug(f"文本内容后12000字符: {text[-12000:]}")
+
 
             if "专利" in doc_type:
                 # 提取专利信息
@@ -323,19 +327,19 @@ async def process_files(files: List[UploadFile] = File(...)):
                         {'=' * 40}"""
             else:
                 # 类型未识别，调用 pdf_pic_reader 提取文本
-                print(f"未识别的文档类型，尝试通过图片提取文本: {file.filename}")
+                logger.debug(f"未识别的文档类型，尝试通过图片提取文本: {file.filename}")
                 try:
                     text = await pdf_pic_reader(temp_file_path)  # 修改为直接处理临时文件路径
                 except Exception as e:
-                    print(f"PDF 转图片失败: {e}")
+                    logger.error(f"PDF 转图片失败: {e}")
                     text = None
-                print(f"重新检测的文本内容: {text[:12000] if text else '无文本'}")
+                logger.debug(f"重新检测的文本内容: {text[:12000] if text else '无文本'}")
                 # 重新检测文档类型
                 raw_doc_type = await detect_doc_type(text)if text else "其他"
                 # 处理doc_type，只保留</think>后的内容
                 doc_type = raw_doc_type.split("</think>")[-1].strip()
 
-                print("重新检测的 doc_type", doc_type)
+                logger.debug("重新检测的 doc_type", doc_type)
 
                 if "专利" in doc_type:
                     # 提取专利信息
@@ -398,7 +402,7 @@ async def process_files(files: List[UploadFile] = File(...)):
                     # 如果仍未识别，则标记为未识别
                     result = f"文件: {file.filename}\n类型: 未识别\n{'=' * 40}"
                     structured_data[file_id] = {"文件名": file.filename, "类型": "未识别"}
-            print("result1",result)
+            logger.info("result1: %s", result)  # 正确的格式化方式
             # 保存结果
             results[file_id] = result
     finally:
