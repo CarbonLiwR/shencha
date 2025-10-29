@@ -45,7 +45,7 @@ async def detect_doc_type(text: str) -> str:
         "Content-Type": "application/json"
     }
     try:
-        response = requests.post(url, json=payload, headers=headers)
+        response = requests.post(url, json=payload, headers=headers, timeout=(30, 90))
         response_data = response.json()
         result = response_data['choices'][0]['message']['content'].strip()
 

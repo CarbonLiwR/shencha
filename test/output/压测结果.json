@@ -1,0 +1,248 @@
+{
+  "summary": {
+    "total_requests": 5,
+    "successful_requests": 5,
+    "failed_requests": 0,
+    "total_time": 210.40300273895264,
+    "avg_response_time": 42.07760133743286,
+    "max_response_time": 69.58568477630615,
+    "min_response_time": 22.550962686538696,
+    "throughput": 0.023763919406623243
+  },
+  "detailed_results": [
+    {
+      "request_id": 0,
+      "success": true,
+      "status_code": 200,
+      "response_time": 68.8673906326294,
+      "data": {
+        "results": {
+          "id1": "文件: 1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf\n                        类型: 论文\n                        标题: Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia\n                        作者: Mei Jiang; Xuemei Wang; Min Yu; Shuling Jiang; Miao Hong; Yuru Zhou; Fei Li; Hongxing Liu; Zhanglin Zhang\n                        期刊: American Journal of Hematology\n                        年份: 2024\n                        DOI: 10.1002/ajh.27272\n                        收稿日期: 2023-12-04\n                        接受日期: 2024-02-18\n                        出版日期: 2024-03-01\n                        项目编号: 国家自然科学基金(82160692, 82160037); 江西省自然科学基金(20232ACB216010); 江西省重大科技研发项目(20213AAG01013) \n                        单位: 南昌大学第一附属医院; 河北燕达陆道培医院    \n                        ========================================",
+          "id2": "文件: 尼日利亚发明专利证书.pdf\n类型: 专利\n专利号：F/PT/NC/2024/10607\n专利名称: INTERNET OF THINGS BASED SYSTEM AND METHOD FOR REGULATING PRODUCTION OF AGRICULTURAL PRODUCTS\n申请日期: 2024-01-12\n授权日期: N/A\n发明人: CHENG, Xiangping, HU, Qiang, QIU, Yijian\n受让人: Institute of Applied Physics, Jiangxi Academy of Sciences\n========================================",
+          "id3": "文件: 一种基于改进近似消息传递的心电信号重构方法.pdf\n类型: 专利\n专利号：202310875944.2\n专利名称: 一种基于改进近似消息传递的心电信号重构方法\n申请日期: 2023-07-18\n授权日期: N/A\n发明人: 高静\n受让人: 南昌大学\n========================================",
+          "id4": "文件: case1.pdf\n                        类型: 论文\n                        标题: N/A\n                        作者: N/A\n                        期刊: N/A\n                        年份: 0\n                        DOI: N/A\n                        收稿日期: N/A\n                        接受日期: N/A\n                        出版日期: N/A\n                        项目编号: N/A \n                        单位: N/A    \n                        ========================================"
+        },
+        "data": {
+          "id1": {
+            "标题": "Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia",
+            "作者": "Mei Jiang; Xuemei Wang; Min Yu; Shuling Jiang; Miao Hong; Yuru Zhou; Fei Li; Hongxing Liu; Zhanglin Zhang",
+            "期刊": "American Journal of Hematology",
+            "year": 2024,
+            "DOI": "10.1002/ajh.27272",
+            "received_date": "2023-12-04",
+            "accepted_date": "2024-02-18",
+            "published_date": "2024-03-01",
+            "project_number": "国家自然科学基金(82160692, 82160037); 江西省自然科学基金(20232ACB216010); 江西省重大科技研发项目(20213AAG01013)",
+            "institution": "南昌大学第一附属医院; 河北燕达陆道培医院",
+            "文件名": "1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf",
+            "类型": "论文"
+          },
+          "id2": {
+            "专利号": "F/PT/NC/2024/10607",
+            "专利名称": "INTERNET OF THINGS BASED SYSTEM AND METHOD FOR REGULATING PRODUCTION OF AGRICULTURAL PRODUCTS",
+            "申请日期": "2024-01-12",
+            "授权日期": "N/A",
+            "发明人": "CHENG, Xiangping, HU, Qiang, QIU, Yijian",
+            "受让人": "Institute of Applied Physics, Jiangxi Academy of Sciences",
+            "文件名": "尼日利亚发明专利证书.pdf",
+            "类型": "专利"
+          },
+          "id3": {
+            "专利号": "202310875944.2",
+            "专利名称": "一种基于改进近似消息传递的心电信号重构方法",
+            "申请日期": "2023-07-18",
+            "授权日期": "N/A",
+            "发明人": "高静",
+            "受让人": "南昌大学",
+            "文件名": "一种基于改进近似消息传递的心电信号重构方法.pdf",
+            "类型": "专利"
+          },
+          "id4": {
+            "标题": "N/A",
+            "作者": "N/A",
+            "期刊": "N/A",
+            "year": 0,
+            "DOI": "N/A",
+            "received_date": "N/A",
+            "accepted_date": "N/A",
+            "published_date": "N/A",
+            "project_number": "N/A",
+            "institution": "N/A",
+            "文件名": "case1.pdf",
+            "类型": "论文"
+          }
+        }
+      }
+    },
+    {
+      "request_id": 1,
+      "success": true,
+      "status_code": 200,
+      "response_time": 69.58568477630615,
+      "data": {
+        "results": {
+          "id1": "文件: 1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf\n                        类型: 论文\n                        标题: Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia\n                        作者: Mei Jiang; Xuemei Wang; Min Yu; Shuling Jiang; Miao Hong; Yuru Zhou; Fei Li; Hongxing Liu; Zhanglin Zhang\n                        期刊: American Journal of Hematology\n                        年份: 2024\n                        DOI: 10.1002/ajh.27272\n                        收稿日期: 2023-12-04\n                        接受日期: 2024-02-18\n                        出版日期: 2024-03-01\n                        项目编号: 国家自然科学基金(82160692,82160037); 江西省自然科学基金(20232ACB216010); 江西省重大科技研发项目(20213AAG01013) \n                        单位: 南昌大学第一附属医院; 河北燕达陆道培医院    \n                        ========================================",
+          "id2": "文件: 尼日利亚发明专利证书.pdf\n类型: 专利\n专利号：F/PT/NC/2024/10607\n专利名称: INTERNET OF THINGS BASED SYSTEM AND METHOD FOR REGULATING PRODUCTION OF AGRICULTURAL PRODUCTS\n申请日期: 2024-01-12\n授权日期: N/A\n发明人: CHENG, Xiangping, HU, Qiang, QIU, Yijian\n受让人: Institute of Applied Physics, Jiangxi Academy of Sciences\n========================================",
+          "id3": "文件: 一种基于改进近似消息传递的心电信号重构方法.pdf\n类型: 专利\n专利号：202310875944.2\n专利名称: 一种基于改进近似消息传递的心电信号重构方法\n申请日期: 2023-07-18\n授权日期: N/A\n发明人: 高静\n受让人: 南昌大学\n========================================",
+          "id4": "文件: case1.pdf\n                        类型: 论文\n                        标题: N/A\n                        作者: N/A\n                        期刊: N/A\n                        年份: 0\n                        DOI: N/A\n                        收稿日期: N/A\n                        接受日期: N/A\n                        出版日期: N/A\n                        项目编号: N/A \n                        单位: N/A    \n                        ========================================"
+        },
+        "data": {
+          "id1": {
+            "标题": "Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia",
+            "作者": "Mei Jiang; Xuemei Wang; Min Yu; Shuling Jiang; Miao Hong; Yuru Zhou; Fei Li; Hongxing Liu; Zhanglin Zhang",
+            "期刊": "American Journal of Hematology",
+            "year": 2024,
+            "DOI": "10.1002/ajh.27272",
+            "received_date": "2023-12-04",
+            "accepted_date": "2024-02-18",
+            "published_date": "2024-03-01",
+            "project_number": "国家自然科学基金(82160692,82160037); 江西省自然科学基金(20232ACB216010); 江西省重大科技研发项目(20213AAG01013)",
+            "institution": "南昌大学第一附属医院; 河北燕达陆道培医院",
+            "文件名": "1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf",
+            "类型": "论文"
+          },
+          "id2": {
+            "专利号": "F/PT/NC/2024/10607",
+            "专利名称": "INTERNET OF THINGS BASED SYSTEM AND METHOD FOR REGULATING PRODUCTION OF AGRICULTURAL PRODUCTS",
+            "申请日期": "2024-01-12",
+            "授权日期": "N/A",
+            "发明人": "CHENG, Xiangping, HU, Qiang, QIU, Yijian",
+            "受让人": "Institute of Applied Physics, Jiangxi Academy of Sciences",
+            "文件名": "尼日利亚发明专利证书.pdf",
+            "类型": "专利"
+          },
+          "id3": {
+            "专利号": "202310875944.2",
+            "专利名称": "一种基于改进近似消息传递的心电信号重构方法",
+            "申请日期": "2023-07-18",
+            "授权日期": "N/A",
+            "发明人": "高静",
+            "受让人": "南昌大学",
+            "文件名": "一种基于改进近似消息传递的心电信号重构方法.pdf",
+            "类型": "专利"
+          },
+          "id4": {
+            "标题": "N/A",
+            "作者": "N/A",
+            "期刊": "N/A",
+            "year": 0,
+            "DOI": "N/A",
+            "received_date": "N/A",
+            "accepted_date": "N/A",
+            "published_date": "N/A",
+            "project_number": "N/A",
+            "institution": "N/A",
+            "文件名": "case1.pdf",
+            "类型": "论文"
+          }
+        }
+      }
+    },
+    {
+      "request_id": 2,
+      "success": true,
+      "status_code": 200,
+      "response_time": 22.550962686538696,
+      "data": {
+        "results": {
+          "id1": "文件: 1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf\n类型: 未识别\n========================================",
+          "id2": "文件: 尼日利亚发明专利证书.pdf\n类型: 未识别\n========================================",
+          "id3": "文件: 一种基于改进近似消息传递的心电信号重构方法.pdf\n类型: 未识别\n========================================",
+          "id4": "文件: case1.pdf\n类型: 未识别\n========================================"
+        },
+        "data": {
+          "id1": {
+            "文件名": "1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf",
+            "类型": "未识别"
+          },
+          "id2": {
+            "文件名": "尼日利亚发明专利证书.pdf",
+            "类型": "未识别"
+          },
+          "id3": {
+            "文件名": "一种基于改进近似消息传递的心电信号重构方法.pdf",
+            "类型": "未识别"
+          },
+          "id4": {
+            "文件名": "case1.pdf",
+            "类型": "未识别"
+          }
+        }
+      }
+    },
+    {
+      "request_id": 3,
+      "success": true,
+      "status_code": 200,
+      "response_time": 26.672494649887085,
+      "data": {
+        "results": {
+          "id1": "文件: 1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf\n类型: 未识别\n========================================",
+          "id2": "文件: 尼日利亚发明专利证书.pdf\n类型: 未识别\n========================================",
+          "id3": "文件: 一种基于改进近似消息传递的心电信号重构方法.pdf\n类型: 未识别\n========================================",
+          "id4": "文件: case1.pdf\n                        类型: 论文\n                        标题: N/A\n                        作者: N/A\n                        期刊: N/A\n                        年份: N/A\n                        DOI: N/A\n                        收稿日期: N/A\n                        接受日期: N/A\n                        出版日期: N/A\n                        项目编号: N/A \n                        单位: N/A    \n                        ========================================"
+        },
+        "data": {
+          "id1": {
+            "文件名": "1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf",
+            "类型": "未识别"
+          },
+          "id2": {
+            "文件名": "尼日利亚发明专利证书.pdf",
+            "类型": "未识别"
+          },
+          "id3": {
+            "文件名": "一种基于改进近似消息传递的心电信号重构方法.pdf",
+            "类型": "未识别"
+          },
+          "id4": {
+            "标题": "N/A",
+            "作者": "N/A",
+            "期刊": "N/A",
+            "year": "N/A",
+            "DOI": "N/A",
+            "received_date": "N/A",
+            "accepted_date": "N/A",
+            "published_date": "N/A",
+            "project_number": "N/A",
+            "institution": "N/A",
+            "文件名": "case1.pdf",
+            "类型": "论文"
+          }
+        }
+      }
+    },
+    {
+      "request_id": 4,
+      "success": true,
+      "status_code": 200,
+      "response_time": 22.71147394180298,
+      "data": {
+        "results": {
+          "id1": "文件: 1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf\n类型: 未识别\n========================================",
+          "id2": "文件: 尼日利亚发明专利证书.pdf\n类型: 未识别\n========================================",
+          "id3": "文件: 一种基于改进近似消息传递的心电信号重构方法.pdf\n类型: 未识别\n========================================",
+          "id4": "文件: case1.pdf\n类型: 未识别\n========================================"
+        },
+        "data": {
+          "id1": {
+            "文件名": "1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf",
+            "类型": "未识别"
+          },
+          "id2": {
+            "文件名": "尼日利亚发明专利证书.pdf",
+            "类型": "未识别"
+          },
+          "id3": {
+            "文件名": "一种基于改进近似消息传递的心电信号重构方法.pdf",
+            "类型": "未识别"
+          },
+          "id4": {
+            "文件名": "case1.pdf",
+            "类型": "未识别"
+          }
+        }
+      }
+    }
+  ]
+}

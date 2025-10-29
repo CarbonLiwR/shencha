@@ -11,3 +11,4 @@ async def send_async_request(url, headers, data):
                 print(f"请求失败，状态码: {response.status}")
                 print(await response.text())
                 return None
+

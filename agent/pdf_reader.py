@@ -109,7 +109,7 @@ async def extract_text_from_images(image_paths: list) -> str:
             }
 
             logger.debug(f"发送OCR请求，图片大小: {len(base64_image)} bytes")
-            response = requests.post(url, json=payload, headers=headers)
+            response = requests.post(url, json=payload, headers=headers, timeout=(30, 90))
             response.raise_for_status()  # 检查HTTP错误
 
             response_data = response.json()

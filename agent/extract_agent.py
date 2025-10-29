@@ -155,7 +155,7 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
         "Content-Type": "application/json"
     }
     logger.info(f"发送请求到大模型API，文档类型: {doc_type}")
-    response = requests.post(url, json=payload, headers=headers)
+    response = requests.post(url, json=payload, headers=headers, timeout=(30, 90))
     response_data = response.json()
     content=response_data['choices'][0]['message']['content']
     logger.debug(f"大模型原始响应内容: {content}...")

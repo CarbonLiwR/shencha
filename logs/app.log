@@ -1,0 +1,125 @@
+2025-10-29 00:29:23,779 - INFO - app.py:188 - 开始处理文件上传请求，文件数量: 3
+2025-10-29 00:29:23,780 - INFO - app.py:197 - 处理文件 1/3: 1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf
+2025-10-29 00:29:23,784 - INFO - pdf_reader.py:28 - 开始处理PDF文件: C:\Users\Administrator\AppData\Local\Temp\tmp3npaqkdg\1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf
+2025-10-29 00:29:24,846 - INFO - doc_detecter.py:22 - 开始检测文档类型
+2025-10-29 00:29:25,712 - INFO - doc_detecter.py:52 - 大模型返回结果: 论文
+2025-10-29 00:29:25,713 - INFO - extract_agent.py:18 - 开始提取信息，文档类型: 论文, 文件名: 1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf
+2025-10-29 00:29:25,714 - INFO - extract_agent.py:157 - 发送请求到大模型API，文档类型: 论文
+2025-10-29 00:29:55,625 - INFO - app.py:405 - result1: 文件: 1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf
+                        类型: 论文
+                        标题: Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia
+                        作者: Mei Jiang; Xuemei Wang; Min Yu; Shuling Jiang; Miao Hong; Yuru Zhou; Fei Li; Hongxing Liu; Zhanglin Zhang
+                        期刊: American Journal of Hematology
+                        年份: 2024
+                        DOI: 10.1002/ajh.27272
+                        收稿日期: 2023-12-04
+                        接受日期: 2024-02-18
+                        出版日期: 2024-05-01
+                        项目编号: 国家自然科学基金(82160692,82160037); 江西省自然科学基金(20232ACB216010); 江西省重点科技研发项目(20213AAG01013) 
+                        单位: 南昌大学第一附属医院; 河北燕达陆道培医院; 南昌大学护理学院    
+                        ========================================
+2025-10-29 00:29:55,625 - INFO - app.py:197 - 处理文件 2/3: 尼日利亚发明专利证书.pdf
+2025-10-29 00:29:55,631 - INFO - pdf_reader.py:28 - 开始处理PDF文件: C:\Users\Administrator\AppData\Local\Temp\tmp3npaqkdg\尼日利亚发明专利证书.pdf
+2025-10-29 00:29:55,989 - WARNING - pdfinterp.py:831 - Cannot set gray non-stroke color because /'P1' is an invalid float value
+2025-10-29 00:29:56,042 - WARNING - pdfinterp.py:831 - Cannot set gray non-stroke color because /'P2' is an invalid float value
+2025-10-29 00:29:56,167 - WARNING - pdfinterp.py:831 - Cannot set gray non-stroke color because /'P1' is an invalid float value
+2025-10-29 00:29:56,884 - INFO - doc_detecter.py:22 - 开始检测文档类型
+2025-10-29 00:29:58,342 - INFO - doc_detecter.py:52 - 大模型返回结果: 专利
+2025-10-29 00:29:58,344 - INFO - extract_agent.py:18 - 开始提取信息，文档类型: 专利, 文件名: 尼日利亚发明专利证书.pdf
+2025-10-29 00:29:58,344 - INFO - extract_agent.py:157 - 发送请求到大模型API，文档类型: 专利
+2025-10-29 00:30:13,003 - INFO - app.py:405 - result1: 文件: 尼日利亚发明专利证书.pdf
+类型: 专利
+专利号：F/PT/NC/2024/10607
+专利名称: INTERNET OF THINGS BASED SYSTEM AND METHOD FOR REGULATING PRODUCTION OF AGRICULTURAL PRODUCTS
+申请日期: 2024-01-12
+授权日期: N/A
+发明人: CHENG, Xiangping, HU, Qiang, QIU, Yijian
+受让人: Institute of Applied Physics, Jiangxi Academy of Sciences
+========================================
+2025-10-29 00:30:13,004 - INFO - app.py:197 - 处理文件 3/3: 一种基于改进近似消息传递的心电信号重构方法.pdf
+2025-10-29 00:30:13,007 - INFO - pdf_reader.py:28 - 开始处理PDF文件: C:\Users\Administrator\AppData\Local\Temp\tmp3npaqkdg\一种基于改进近似消息传递的心电信号重构方法.pdf
+2025-10-29 00:30:13,221 - INFO - doc_detecter.py:22 - 开始检测文档类型
+2025-10-29 00:30:14,081 - INFO - doc_detecter.py:52 - 大模型返回结果: 专利
+2025-10-29 00:30:14,087 - INFO - extract_agent.py:18 - 开始提取信息，文档类型: 专利, 文件名: 一种基于改进近似消息传递的心电信号重构方法.pdf
+2025-10-29 00:30:14,089 - INFO - extract_agent.py:157 - 发送请求到大模型API，文档类型: 专利
+2025-10-29 00:30:22,376 - INFO - app.py:405 - result1: 文件: 一种基于改进近似消息传递的心电信号重构方法.pdf
+类型: 专利
+专利号：202310875944.2
+专利名称: 一种基于改进近似消息传递的心电信号重构方法
+申请日期: 2023-07-18
+授权日期: N/A
+发明人: 高静
+受让人: 南昌大学
+========================================
+2025-10-29 00:41:03,826 - INFO - app.py:188 - 开始处理文件上传请求，文件数量: 4
+2025-10-29 00:41:03,826 - INFO - app.py:197 - 处理文件 1/4: 1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf
+2025-10-29 00:41:03,829 - INFO - pdf_reader.py:28 - 开始处理PDF文件: C:\Users\Administrator\AppData\Local\Temp\tmpkyyjss55\1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf
+2025-10-29 00:41:04,873 - INFO - doc_detecter.py:22 - 开始检测文档类型
+2025-10-29 00:41:06,015 - INFO - doc_detecter.py:52 - 大模型返回结果: 论文
+2025-10-29 00:41:06,015 - INFO - extract_agent.py:18 - 开始提取信息，文档类型: 论文, 文件名: 1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf
+2025-10-29 00:41:06,015 - INFO - extract_agent.py:157 - 发送请求到大模型API，文档类型: 论文
+2025-10-29 00:41:31,600 - INFO - app.py:405 - result1: 文件: 1.张长林-论文-共通讯-American J Hematol - 2024 - Jiang - Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia.pdf
+                        类型: 论文
+                        标题: Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia
+                        作者: Mei Jiang; Xuemei Wang; Min Yu; Shuling Jiang; Miao Hong; Yuru Zhou; Fei Li; Hongxing Liu; Zhanglin Zhang
+                        期刊: American Journal of Hematology
+                        年份: 2024
+                        DOI: 10.1002/ajh.27272
+                        收稿日期: 2023-12-04
+                        接受日期: 2024-02-18
+                        出版日期: 2024-03-01
+                        项目编号: 国家自然科学基金(82160692,82160037); 江西省自然科学基金(20232ACB216010); 江西省重大科技研发计划(20213AAG01013) 
+                        单位: 南昌大学第一附属医院; 河北燕达陆道培医院    
+                        ========================================
+2025-10-29 00:41:31,601 - INFO - app.py:197 - 处理文件 2/4: 尼日利亚发明专利证书.pdf
+2025-10-29 00:41:31,609 - INFO - pdf_reader.py:28 - 开始处理PDF文件: C:\Users\Administrator\AppData\Local\Temp\tmpkyyjss55\尼日利亚发明专利证书.pdf
+2025-10-29 00:41:31,929 - WARNING - pdfinterp.py:831 - Cannot set gray non-stroke color because /'P1' is an invalid float value
+2025-10-29 00:41:32,023 - WARNING - pdfinterp.py:831 - Cannot set gray non-stroke color because /'P2' is an invalid float value
+2025-10-29 00:41:32,150 - WARNING - pdfinterp.py:831 - Cannot set gray non-stroke color because /'P1' is an invalid float value
+2025-10-29 00:41:32,886 - INFO - doc_detecter.py:22 - 开始检测文档类型
+2025-10-29 00:41:33,372 - INFO - doc_detecter.py:52 - 大模型返回结果: 专利
+2025-10-29 00:41:33,373 - INFO - extract_agent.py:18 - 开始提取信息，文档类型: 专利, 文件名: 尼日利亚发明专利证书.pdf
+2025-10-29 00:41:33,374 - INFO - extract_agent.py:157 - 发送请求到大模型API，文档类型: 专利
+2025-10-29 00:41:43,743 - INFO - app.py:405 - result1: 文件: 尼日利亚发明专利证书.pdf
+类型: 专利
+专利号：F/PT/NC/2024/10607
+专利名称: INTERNET OF THINGS BASED SYSTEM AND METHOD FOR REGULATING PRODUCTION OF AGRICULTURAL PRODUCTS
+申请日期: 2024-01-12
+授权日期: N/A
+发明人: CHENG, Xiangping, HU, Qiang, QIU, Yijian
+受让人: Institute of Applied Physics, Jiangxi Academy of Sciences
+========================================
+2025-10-29 00:41:43,744 - INFO - app.py:197 - 处理文件 3/4: 一种基于改进近似消息传递的心电信号重构方法.pdf
+2025-10-29 00:41:43,752 - INFO - pdf_reader.py:28 - 开始处理PDF文件: C:\Users\Administrator\AppData\Local\Temp\tmpkyyjss55\一种基于改进近似消息传递的心电信号重构方法.pdf
+2025-10-29 00:41:43,930 - INFO - doc_detecter.py:22 - 开始检测文档类型
+2025-10-29 00:41:44,433 - INFO - doc_detecter.py:52 - 大模型返回结果: 专利
+2025-10-29 00:41:44,434 - INFO - extract_agent.py:18 - 开始提取信息，文档类型: 专利, 文件名: 一种基于改进近似消息传递的心电信号重构方法.pdf
+2025-10-29 00:41:44,435 - INFO - extract_agent.py:157 - 发送请求到大模型API，文档类型: 专利
+2025-10-29 00:41:51,803 - INFO - app.py:405 - result1: 文件: 一种基于改进近似消息传递的心电信号重构方法.pdf
+类型: 专利
+专利号：202310875944.2
+专利名称: 一种基于改进近似消息传递的心电信号重构方法
+申请日期: 2023-07-18
+授权日期: N/A
+发明人: 高静
+受让人: 南昌大学
+========================================
+2025-10-29 00:41:51,805 - INFO - app.py:197 - 处理文件 4/4: case1.pdf
+2025-10-29 00:41:51,814 - INFO - pdf_reader.py:28 - 开始处理PDF文件: C:\Users\Administrator\AppData\Local\Temp\tmpkyyjss55\case1.pdf
+2025-10-29 00:41:57,194 - INFO - doc_detecter.py:22 - 开始检测文档类型
+2025-10-29 00:41:57,917 - INFO - doc_detecter.py:52 - 大模型返回结果: 论文
+2025-10-29 00:41:57,923 - INFO - extract_agent.py:18 - 开始提取信息，文档类型: 论文, 文件名: case1.pdf
+2025-10-29 00:41:57,926 - INFO - extract_agent.py:157 - 发送请求到大模型API，文档类型: 论文
+2025-10-29 00:42:08,008 - INFO - app.py:405 - result1: 文件: case1.pdf
+                        类型: 论文
+                        标题: N/A
+                        作者: N/A
+                        期刊: N/A
+                        年份: 0
+                        DOI: N/A
+                        收稿日期: N/A
+                        接受日期: N/A
+                        出版日期: N/A
+                        项目编号: N/A 
+                        单位: N/A    
+                        ========================================
