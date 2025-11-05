@@ -13,13 +13,13 @@ VISION_MODEL = os.getenv('VISION_MODEL')
 from logging_config import logger
 
 async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any]:
-    first = text[:12000] # 限制前12000个字符
-    last = text[-12000:] # 限制后12000个字符
-    logger.info(f"开始提取信息，文档类型: {doc_type}, 文件名: {filename}")
+    first = text[:5000] # 限制前5000个字符
+    last = text[-5000:] # 限制后5000个字符
+    # logger.info(f"开始提取信息，文档类型: {doc_type}, 文件名: {filename},前12000字符: {first}...,后12000字符: {last}...")
     if doc_type == '专利':
         prompt = f"""
         从以下专利文件{filename}文本中提取信息：
-        {first}
+        {text}
 
         要求返回严格JSON格式，请提取以下字段：
         1. 专利号
@@ -34,7 +34,7 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
     elif doc_type == '论文':
         prompt = f"""
         请从以下论文文件{filename}文本中精确提取信息：
-        {first,last}
+        {text}
 
         要求返回严格JSON格式，包含以下字段：
         1. 标题（必须提取）
@@ -71,7 +71,7 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
     elif doc_type == '标准':
         prompt = f"""
         请从以下标准文件{filename}文本中精确提取信息：
-        {first}
+        {text}
 
         要求返回严格JSON格式，包含以下字段：
         1. 标准名称（完整名称）
@@ -102,7 +102,7 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
     elif doc_type == '软著':
         prompt = f"""
         请从以下软件著作权登记文件{filename}文本中精确提取信息（包括正文与OCR识别部分）：
-        {first}
+        {text}
 
         要求返回严格JSON格式，包含以下字段：
         1. 证书号
@@ -136,26 +136,15 @@ async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any
 
     payload = {
         "model": TEXT_MODEL,
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "你是一个信息提取专家"+prompt+"你返回的JSON格式的字段必须严格按照要求，必须为中文字段名"
-                    }
+        "messages": [{"role": "user", "content": "你是一个信息提取专家"+prompt+"你返回的JSON格式的字段必须严格按照要求，必须为中文字段名"}]
 
-                ]
-            },
-
-        ]
     }
     headers = {
         "Authorization":  f"Bearer {API_KEY}",
         "Content-Type": "application/json"
     }
     logger.info(f"发送请求到大模型API，文档类型: {doc_type}")
-    response = requests.post(url, json=payload, headers=headers, timeout=(30, 90))
+    response = requests.post(url, json=payload, headers=headers)
     response_data = response.json()
     content=response_data['choices'][0]['message']['content']
     logger.debug(f"大模型原始响应内容: {content}...")
