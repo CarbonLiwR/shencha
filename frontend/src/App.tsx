@@ -428,152 +428,90 @@ const App: React.FC = () => {
                     </Col>
 
                     {/* 右侧结果与时间选择区域 */}
-                    <Col span={16} style={{padding: '16px'}}>
-                        <Row style={{height: '50%', marginBottom: '16px'}}>
-                            <Col span={4}>
-                                <Title level={5}>论文结果</Title>
-                                <div style={{
-                                    border: '1px solid #d9d9d9',
-                                    height: '38vh',
-                                    overflow: 'auto',
-                                    padding: '8px'
-                                }}>
-                                    {processedResults.paperResults.length > 0 ? (
-                                        processedResults.paperResults.map((result, index) => <p
-                                            key={index}>{result}</p>)
-                                    ) : (
-                                        <p>暂无论文结果</p>
-                                    )}
-                                </div>
-                            </Col>
-                            <Col span={4}>
-                                <Title level={5}>专利结果</Title>
-                                <div style={{
-                                    border: '1px solid #d9d9d9',
-                                    height: '38vh',
-                                    overflow: 'auto',
-                                    padding: '8px'
-                                }}>
-                                    {processedResults.patentResults.length > 0 ? (
-                                        processedResults.patentResults.map((result, index) => <p
-                                            key={index}>{result}</p>)
-                                    ) : (
-                                        <p>暂无专利结果</p>
-                                    )}
-                                </div>
-                            </Col>
-                            <Col span={4}>
-                                <Title level={5}>标准结果</Title>
-                                <div style={{
-                                    border: '1px solid #d9d9d9',
-                                    height: '38vh',
-                                    overflow: 'auto',
-                                    padding: '8px'
-                                }}>
-                                    {processedResults.standardResults.length > 0 ? (
-                                        processedResults.standardResults.map((result, index) => <p
-                                            key={index}>{result}</p>)
-                                    ) : (
-                                        <p>暂无标准结果</p>
-                                    )}
-                                </div>
-                            </Col>
-                            <Col span={4}>
-                                <Title level={5}>软著结果</Title>
-                                <div style={{
-                                    border: '1px solid #d9d9d9',
-                                    height: '38vh',
-                                    overflow: 'auto',
-                                    padding: '8px'
-                                }}>
-                                    {processedResults.copyrightResults.length > 0 ? (
-                                        processedResults.copyrightResults.map((result, index) => <p key={index}>{result}</p>)
-                                    ) : (
-                                        <p>暂无软著结果</p>
-                                    )}
-                                </div>
-                            </Col>
-                            <Col span={4}>
-                                <Title level={5}>其他文件结果</Title>
-                                <div style={{
-                                    border: '1px solid #d9d9d9',
-                                    height: '38vh',
-                                    overflow: 'auto',
-                                    padding: '8px'
-                                }}>
-                                    {processedResults.unrecognizedResults.length > 0 ? (
-                                        processedResults.unrecognizedResults.map((result, index) => <p
-                                            key={index}>{result}</p>)
-                                    ) : (
-                                        <p>暂无结果</p>
-                                    )}
-                                </div>
-                            </Col>
+                    <Col span={16} style={{ padding: '16px' }}>
+  {/* 第一行：3个模块 */}
+  <Row gutter={[16, 16]} style={{ marginBottom: '16px' }}>
+    <Col span={8}>
+      <Title level={5}>论文结果</Title>
+      <div style={{
+        border: '1px solid #d9d9d9',
+        height: '38vh',
+        overflow: 'auto',
+        padding: '8px'
+      }}>
+        {processedResults.paperResults.length > 0 ? (
+          processedResults.paperResults.map((result, index) => <p key={index}>{result}</p>)
+        ) : (
+          <p>暂无论文结果</p>
+        )}
+      </div>
+    </Col>
+    <Col span={8}>
+      <Title level={5}>专利结果</Title>
+      <div style={{
+        border: '1px solid #d9d9d9',
+        height: '38vh',
+        overflow: 'auto',
+        padding: '8px'
+      }}>
+        {processedResults.patentResults.length > 0 ? (
+          processedResults.patentResults.map((result, index) => <p key={index}>{result}</p>)
+        ) : (
+          <p>暂无专利结果</p>
+        )}
+      </div>
+    </Col>
+    <Col span={8}>
+      <Title level={5}>标准结果</Title>
+      <div style={{
+        border: '1px solid #d9d9d9',
+        height: '38vh',
+        overflow: 'auto',
+        padding: '8px'
+      }}>
+        {processedResults.standardResults.length > 0 ? (
+          processedResults.standardResults.map((result, index) => <p key={index}>{result}</p>)
+        ) : (
+          <p>暂无标准结果</p>
+        )}
+      </div>
+    </Col>
+  </Row>
 
-                        </Row>
-                        <Row style={{
-                            marginTop: "10px",
-                            display: 'flex',
-                            alignItems: 'center'
-                        }}>
-                            <Col span={20}>
-                                <Space direction="horizontal" size={12}>
-                                    选择有效时间:<RangePicker onChange={handleTimeChange}/>
-                                </Space>
-                            </Col>
-                            <Col span={4}>
-                                <Button type="primary" onClick={checkValidity} style={{justifyContent: "center"}}>
-                                    检查有效文档
-                                </Button>
-                            </Col>
-                        </Row>
-                        <Row style={{height: '35%', paddingTop: '16px'}}>
-                            <Col span={6} style={{paddingRight: '8px'}}>
-                                <Title level={5}>符合条件的论文</Title>
-                                <div style={{
-                                    border: '1px solid #d9d9d9',
-                                    height: '100%',
-                                    overflow: 'auto',
-                                    padding: '8px'
-                                }}>
-                                    {timeCheckPaperResult ? timeCheckPaperResult : <p>暂无符合条件的论文结果</p>}
-                                </div>
-                            </Col>
-                            <Col span={6} style={{paddingLeft: '8px'}}>
-                                <Title level={5}>符合条件的专利</Title>
-                                <div style={{
-                                    border: '1px solid #d9d9d9',
-                                    height: '100%',
-                                    overflow: 'auto',
-                                    padding: '8px'
-                                }}>
-                                    {timeCheckPatentResult ? timeCheckPatentResult : <p>暂无符合条件的专利结果</p>}
-                                </div>
-                            </Col>
-                            <Col span={6} style={{paddingLeft: '8px'}}>
-                                <Title level={5}>符合条件的标准</Title>
-                                <div style={{
-                                    border: '1px solid #d9d9d9',
-                                    height: '100%',
-                                    overflow: 'auto',
-                                    padding: '8px'
-                                }}>
-                                    {timeCheckStandardResult ? timeCheckStandardResult : <p>暂无符合条件的标准结果</p>}
-                                </div>
-                            </Col>
-                            <Col span={6} style={{paddingLeft: '8px'}}>
-                                <Title level={5}>符合条件的软著</Title>
-                                <div style={{
-                                    border: '1px solid #d9d9d9',
-                                    height: '100%',
-                                    overflow: 'auto',
-                                    padding: '8px'
-                                }}>
-                                    {timeCheckCopyrightResult ? timeCheckCopyrightResult : <p>暂无符合条件的软著结果</p>}
-                                </div>
-                            </Col>
-                        </Row>
-                    </Col>
+  {/* 第二行：2个模块 */}
+  <Row gutter={[16, 16]}>
+    <Col span={12}>
+      <Title level={5}>软著结果</Title>
+      <div style={{
+        border: '1px solid #d9d9d9',
+        height: '38vh',
+        overflow: 'auto',
+        padding: '8px'
+      }}>
+        {processedResults.copyrightResults.length > 0 ? (
+          processedResults.copyrightResults.map((result, index) => <p key={index}>{result}</p>)
+        ) : (
+          <p>暂无软著结果</p>
+        )}
+      </div>
+    </Col>
+    <Col span={12}>
+      <Title level={5}>其他文件结果</Title>
+      <div style={{
+        border: '1px solid #d9d9d9',
+        height: '38vh',
+        overflow: 'auto',
+        padding: '8px'
+      }}>
+        {processedResults.unrecognizedResults.length > 0 ? (
+          processedResults.unrecognizedResults.map((result, index) => <p key={index}>{result}</p>)
+        ) : (
+          <p>暂无结果</p>
+        )}
+      </div>
+    </Col>
+  </Row>
+</Col>
                 </Row>
             </Content>
         </Layout>
