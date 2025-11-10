@@ -1,174 +1,173 @@
-import json,re,os
+import os
+import re
+import json
+import asyncio
+import aiohttp
+import itertools
 from typing import Dict, Any
 from dotenv import load_dotenv
-
-# 加载环境变量
-load_dotenv()
-# 获取配置
-API_BASE_URL = os.getenv('API_BASE_URL')
-API_KEY = os.getenv('API_KEY')
-TEXT_MODEL = os.getenv('TEXT_MODEL')
-VISION_MODEL = os.getenv('VISION_MODEL')
-
 from logging_config import logger
 
+# ===============================
+# 环境变量与全局配置
+# ===============================
+load_dotenv()
+
+API_BASE_URL = os.getenv("API_BASE_URL")
+TEXT_MODEL = os.getenv("TEXT_MODEL")
+
+API_KEYS = [k.strip() for k in os.getenv("API_KEY", "").split(",") if k.strip()]
+api_key_cycle = itertools.cycle(API_KEYS)
+
+# 控制并发数（建议3-5，根据服务器和模型性能调整）
+semaphore = asyncio.Semaphore(3)
+
+def get_next_api_key():
+    return next(api_key_cycle)
+
+
+# ===============================
+# 核心函数：extract_info
+# ===============================
 async def extract_info(text: str, doc_type: str, filename: str) -> Dict[str, Any]:
-    first = text[:5000] # 限制前5000个字符
-    last = text[-5000:] # 限制后5000个字符
-    # logger.info(f"开始提取信息，文档类型: {doc_type}, 文件名: {filename},前12000字符: {first}...,后12000字符: {last}...")
-    if doc_type == '专利':
+    logger.info(f"开始提取信息，文档类型: {doc_type}, 文件名: {filename}")
+
+    # ---------- 生成 prompt ----------
+    if doc_type == "专利":
         prompt = f"""
-        从以下专利文件{filename}文本中提取信息：
+        请从以下专利文件《{filename}》的文本中提取信息：
         {text}
 
-        要求返回严格JSON格式，请提取以下字段：
-        1. 专利号
-        2. 专利名称
-        3. 申请日期（YYYY-MM-DD）
-        4. 授权日期（如无则写N/A）
-        5. 发明人（逗号分隔）
-        6. 受让人（公司/机构）
-
-        返回 JSON 格式。
-        """
-    elif doc_type == '论文':
-        prompt = f"""
-        请从以下论文文件{filename}文本中精确提取信息：
-        {text}
-
-        要求返回严格JSON格式，包含以下字段：
-        1. 标题（必须提取）
-        2. 作者（分号分隔，如"张三; 李四; 王五"）
-        3. 期刊/会议名称（完整名称）
-        4. 发表年份（YYYY，必须从文本中提取）
-        5. DOI（完整格式，如"10.1002/ajh.27272"，若无则写N/A）
-        6. received_date（收稿日期，YYYY-MM-DD格式）
-        7. accepted_date（接受日期，YYYY-MM-DD格式）
-        8. published_date（出版日期，YYYY-MM-DD格式）
-        9. project_number（项目编号，若无则写N/A）
-        10. institution（单位/机构，若无则写N/A）
-
-        特别注意：
-        - 日期格式示例：Received:4December2023 → received_date: "2023-12-04"
-        - 必须包含所有8个字段，没有的字段写N/A
-        - 年份优先从出版日期提取，其次接受日期，最后收稿日期
-        - 如果可行的话，项目编号需要与对应的资助机构一起提供
-
-        示例格式：
+        返回严格 JSON 格式，包含以下字段：
         {{
-          "标题": "Report of IRF2BP1 as a novel partner of RARA in variant acute promyelocytic leukemia",
-          "作者": "Jiang Bin; Zhang San; Li Si",
-          "期刊": "American Journal of Hematology",
+          "专利号": "",
+          "专利名称": "",
+          "申请日期": "YYYY-MM-DD",
+          "授权日期": "YYYY-MM-DD 或 N/A",
+          "发明人": "以逗号分隔",
+          "受让人": "公司或机构名称"
+        }}
+        """
+    elif doc_type == "论文":
+        prompt = f"""
+        请从以下论文文件《{filename}》中提取信息：
+        {text}
+
+        返回严格 JSON 格式，包含：
+        {{
+          "标题": "",
+          "作者": "张三; 李四",
+          "期刊": "",
           "year": 2024,
-          "DOI": "10.1002/ajh.27272",
-          "received_date": "2023-12-04",
-          "accepted_date": "2024-02-18",
-          "published_date": "2024-03-01"
-          "project_number": "国家自然科学基金No.12345678",
-          "institution": "北京大学医学部"
+          "DOI": "",
+          "received_date": "YYYY-MM-DD",
+          "accepted_date": "YYYY-MM-DD",
+          "published_date": "YYYY-MM-DD",
+          "project_number": "",
+          "institution": ""
         }}
+        没有的字段填 "N/A"。
         """
-    elif doc_type == '标准':
+    elif doc_type == "标准":
         prompt = f"""
-        请从以下标准文件{filename}文本中精确提取信息：
+        请从以下标准文件《{filename}》中提取信息：
         {text}
 
-        要求返回严格JSON格式，包含以下字段：
-        1. 标准名称（完整名称）
-        2. 标准形式（如 国标 地标 团标）
-        2. 标准编号（如GB/T 12345-2020）
-        3. 起草单位（分号分隔）
-        4. 起草人（分号分隔）
-        5. 发布单位
-        6. 发布时间（YYYY-MM-DD格式）
-        7. 实施时间（YYYY-MM-DD格式）
-
-        特别注意：
-        - 必须包含所有7个字段，没有的字段写N/A
-        - 日期格式必须统一为YYYY-MM-DD
-
-        示例格式：
+        返回严格 JSON 格式，包含：
         {{
-          "标准名称": "信息技术 软件产品评价 质量特性及其使用指南",
-          "标准编号": "GB/T 16260-2006",
-          "起草单位": "中国电子技术标准化研究所;北京大学",
-          "起草人": "张三;李四;王五",
-          "发布单位": "中华人民共和国国家质量监督检验检疫总局",
-          "发布时间": "2006-03-14",
-          "实施时间": "2006-10-01"
+          "标准名称": "",
+          "标准形式": "国标/地标/团标",
+          "标准编号": "",
+          "起草单位": "",
+          "起草人": "",
+          "发布单位": "",
+          "发布时间": "YYYY-MM-DD",
+          "实施时间": "YYYY-MM-DD"
         }}
         """
-
-    elif doc_type == '软著':
+    elif doc_type == "软著":
         prompt = f"""
-        请从以下软件著作权登记文件{filename}文本中精确提取信息（包括正文与OCR识别部分）：
+        请从以下软件著作权登记文件《{filename}》中提取信息：
         {text}
 
-        要求返回严格JSON格式，包含以下字段：
-        1. 证书号
-        2. 软件名称
-        3. 著作权人
-        4. 登记号
-        5. 授权时间（YYYY-MM-DD格式）
-
-        特别注意：
-        - 必须包含所有5个字段，没有的字段写N/A
-        - 日期必须统一为YYYY-MM-DD
-        - 如果文本与OCR信息冲突，以OCR信息为准
-
-        示例格式：
+        返回严格 JSON 格式，包含：
         {{
-          "证书号": "软著登字第1234567号",
-          "软件名称": "智能语音识别系统V1.0",
-          "著作权人": "北京某某科技有限公司",
-          "登记号": "2024SR1234567",
-          "授权时间": "2024-05-20"
+          "证书号": "",
+          "软件名称": "",
+          "著作权人": "",
+          "登记号": "",
+          "授权时间": "YYYY-MM-DD"
         }}
         """
-
-
     else:
         raise ValueError(f"未知的文档类型: {doc_type}")
 
-    import requests
-
+    # ---------- 构造请求 ----------
     url = API_BASE_URL
-
     payload = {
         "model": TEXT_MODEL,
-        "messages": [{"role": "user", "content": "你是一个信息提取专家"+prompt+"你返回的JSON格式的字段必须严格按照要求，必须为中文字段名"}]
-
+        "messages": [
+            {
+                "role": "user",
+                "content": [{"type": "text", "text": "你是一个信息提取专家。\n" + prompt}]
+            }
+        ],
     }
-    headers = {
-        "Authorization":  f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
-    }
-    logger.info(f"发送请求到大模型API，文档类型: {doc_type}")
-    response = requests.post(url, json=payload, headers=headers)
-    response_data = response.json()
-    content=response_data['choices'][0]['message']['content']
-    logger.debug(f"大模型原始响应内容: {content}...")
-    # return response_data['choices'][0]['message']['content'].strip()
-    #
 
+    # ---------- 并发控制 + 限流 + 重试 ----------
+    async with semaphore:
+        async with aiohttp.ClientSession() as session:
+            for attempt in range(3):
+                API_KEY = get_next_api_key()
+                headers = {
+                    "Authorization": f"Bearer {API_KEY}",
+                    "Content-Type": "application/json"
+                }
+
+                try:
+                    async with session.post(url, json=payload, headers=headers, timeout=400) as resp:
+                        data = await resp.json()
+                        logger.debug(f"大模型响应: {data}")
+
+                        # --- 限流检测 ---
+                        if "rate limit" in str(data).lower() or "tpm" in str(data).lower():
+                            logger.warning(f"触发限流（第{attempt+1}次），切换下一个API_KEY重试")
+                            await asyncio.sleep(2 * (attempt + 1))
+                            continue
+
+                        if "choices" not in data:
+                            logger.error(f"调用失败（第{attempt+1}次）: {data}")
+                            await asyncio.sleep(2 * (attempt + 1))
+                            continue
+
+                        content = data["choices"][0]["message"]["content"].strip()
+                        return _parse_json_from_response(content)
+
+                except Exception as e:
+                    logger.warning(f"调用模型异常（第{attempt+1}次）: {e}")
+                    await asyncio.sleep(2 * (attempt + 1))
+
+    logger.error("多次重试后仍失败，返回空结果")
+    return {"error": "信息提取失败"}
+
+
+# ===============================
+# 工具函数：安全解析JSON
+# ===============================
+def _parse_json_from_response(content: str) -> Dict[str, Any]:
+    """
+    尝试从模型返回文本中安全提取JSON
+    """
     try:
-        result = json.loads(content)  # 尝试直接解析JSON
+        # 直接解析（如果返回就是纯JSON）
+        return json.loads(content)
     except json.JSONDecodeError:
-        # 方法2：如果失败，尝试提取JSON部分
-        match = re.search(r"\{.*\}", content, re.DOTALL)  # 对content字符串操作
-        if not match:
-            raise ValueError(f"未找到JSON内容: {content}")
-        result = json.loads(match.group(0))
-    logger.debug(f"解析后的结果: {result}")
-
-    # 确保所有字段存在
-    if doc_type == '论文':
-        required_fields = [
-            '标题', '作者', '期刊', 'year',
-            'DOI', 'received_date', 'accepted_date', 'published_date'
-        ]
-        for field in required_fields:
-            if field not in result:
-                result[field] = "N/A"
-
-    return result
+        # 提取JSON部分（兼容模型前后夹杂文字的情况）
+        match = re.search(r"\{[\s\S]*\}", content)
+        if match:
+            try:
+                return json.loads(match.group(0))
+            except Exception as e:
+                logger.error(f"JSON提取失败: {e}")
+        logger.error(f"未找到有效JSON，原始内容: {content[:200]}...")
+        return {"error": "解析失败"}
