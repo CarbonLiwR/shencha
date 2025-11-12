@@ -33,6 +33,7 @@ async def detect_doc_type(text: str) -> str:
     {text}
 
     返回：专利、论文、标准、软著、其他。
+    你有且只能返回上述五种类型中的一种，不要返回其他内容。
     """
 
     logger.info("开始检测文档类型")
